@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>列車長工作班表智慧統整系統 (第1~53頁)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter & Noto Sans TC & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    colors: {
+                        rail: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                            950: '#082f49'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 自訂捲軸與觸控優化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.3);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.6);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.8);
+        }
+        .timeline-grid-bg {
+            background-image: linear-gradient(to right, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+        }
+        html:not(.dark) .timeline-grid-bg {
+            background-image: linear-gradient(to right, rgba(71, 85, 105, 0.12) 1px, transparent 1px);
+        }
+        /* 避免手機雙擊縮放干擾操作 */
+        button, select, input {
+            touch-action: manipulation;
+        }
+        .sticky-col-shadow {
+            box-shadow: 4px 0 12px -2px rgba(0, 0, 0, 0.35);
+        }
+        html:not(.dark) .sticky-col-shadow {
+            box-shadow: 4px 0 12px -2px rgba(0, 0, 0, 0.1);
+        }
+        /* 壓到時間軸車次的醒目紅色邊框與呼吸燈效果 */
+        @keyframes pulse-red-border {
+            0%, 100% {
+                box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.95), 0 0 14px rgba(239, 68, 68, 0.75);
+            }
+            50% {
+                box-shadow: 0 0 0 3.5px rgba(248, 113, 113, 1), 0 0 22px rgba(239, 68, 68, 0.95);
+            }
+        }
+        .active-timeline-bar {
+            border: 2.5px solid #ff4d4d !important;
+            animation: pulse-red-border 2s infinite ease-in-out;
+            z-index: 25 !important;
+        }
+        .active-timeline-row-cell {
+            border-left: 4px solid #ef4444 !important;
+            box-shadow: inset 0 0 0 1.5px rgba(239, 68, 68, 0.65);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 light:bg-slate-50 light:text-slate-900 min-h-screen flex flex-col font-sans transition-colors duration-200">
+
+    <!-- 頂部導覽列 -->
+    <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 py-2.5 sm:px-6">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <!-- 標題、作者免責聲明與即時時間 -->
+            <div class="flex items-start sm:items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white shrink-0 mt-0.5 sm:mt-0">
+                    <i class="fa-solid fa-train-subway text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="font-bold text-base sm:text-lg tracking-tight text-white">列車長班表統整系統</h1>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">全53頁</span>
+                    </div>
+                    <!-- 新增：台北車班林崇本車長製作與免責聲明 -->
+                    <p class="text-[11px] sm:text-xs text-amber-300/95 font-medium mt-0.5 leading-snug">
+                        <i class="fa-solid fa-user-tie mr-1 text-amber-400"></i>台北車班林崇本車長製作，僅供參考、不保證資料正確、也不保證更新
+                    </p>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400 font-mono mt-0.5">
+                        <span id="live-clock">--:--:--</span>
+                        <span>•</span>
+                        <span id="pinned-badge-container" class="hidden">
+                            <button onclick="jumpToPinnedPage()" class="text-amber-400 hover:underline flex items-center gap-1">
+                                <i class="fa-solid fa-thumbtack"></i>
+                                <span id="pinned-badge-text">已釘選第1頁</span>
+                            </button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 視角切換與主題按鈕 -->
+            <div class="flex items-center gap-1.5 sm:gap-2 ml-auto">
+                <div class="bg-slate-800 p-1 rounded-xl flex items-center border border-slate-700/70">
+                    <button id="tab-gantt" onclick="switchView('gantt')" class="px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 bg-sky-600 text-white shadow">
+                        <i class="fa-solid fa-chart-gantt"></i>
+                        <span>時間軸圖</span>
+                    </button>
+                    <button id="tab-pages" onclick="switchView('pages')" class="px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 text-slate-300 hover:text-white">
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>班表頁(1-53)</span>
+                    </button>
+                    <button id="tab-handover" onclick="switchView('handover')" class="px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 text-slate-300 hover:text-white">
+                        <i class="fa-solid fa-people-arrows"></i>
+                        <span class="hidden sm:inline">交接/重複車次</span>
+                        <span class="sm:hidden">交接</span>
+                    </button>
+                </div>
+
+                <button onclick="toggleTheme()" id="theme-btn" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-amber-400 transition" title="切換深淺色模式">
+                    <i class="fa-solid fa-sun" id="theme-icon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 智慧搜尋與篩選控制列 -->
+    <section class="bg-slate-900/60 border-b border-slate-800/80 px-3 py-3 sm:px-6">
+        <div class="max-w-7xl mx-auto space-y-2.5">
+            <!-- 第一排：關鍵字搜尋、車站快速篩選、頁碼篩選 -->
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <!-- 搜尋框 -->
+                <div class="sm:col-span-5 relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="search-input" oninput="handleFilterChange()" placeholder="搜尋車次(如 1161、432)、車站(如 台東、花蓮)或頁碼..." 
+                        class="w-full pl-9 pr-8 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                    <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- 車站下拉選單 -->
+                <div class="grid grid-cols-2 sm:col-span-4 gap-2">
+                    <select id="station-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="ALL">📍 所有起訖車站</option>
+                    </select>
+
+                    <!-- 班表頁下拉選單 -->
+                    <select id="page-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="ALL">📄 全部班表頁 (1~53)</option>
+                    </select>
+                </div>
+
+                <!-- 性質與星期篩選 -->
+                <div class="grid grid-cols-2 sm:col-span-3 gap-2">
+                    <select id="day-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="ALL">📅 不限星期 (全部顯示)</option>
+                        <option value="1">週一 行駛班次</option>
+                        <option value="2">週二～週四 行駛班次</option>
+                        <option value="5">週五 行駛班次</option>
+                        <option value="6">週六 行駛班次</option>
+                        <option value="7">週日 行駛班次</option>
+                    </select>
+
+                    <select id="type-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="ALL">🚆 全部勤務性質</option>
+                        <option value="DUTY">一般值乘 (不含便乘)</option>
+                        <option value="DEADHEAD">便乘車次 (含「便」)</option>
+                        <option value="PARCEL">行包專列 (554/653)</option>
+                        <option value="OVERLAP">🔁 樹林交接/多段車次</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 第二排：統計資訊與圖例說明 -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-400">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span class="font-medium text-slate-300" id="stats-counter">載入中...</span>
+                    <span class="inline-flex items-center gap-1 font-medium text-rose-400"><span class="w-2.5 h-2.5 rounded-sm bg-sky-500 border-2 border-red-500 inline-block shadow-[0_0_6px_#ef4444]"></span>壓到時間軸(紅框)</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-sky-500 inline-block"></span>一般值乘</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block"></span>便乘(便)</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>樹林交接/重複車次</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block"></span>行包/回送</span>
+                </div>
+                <button onclick="resetAllFilters()" id="reset-filter-btn" class="hidden text-sky-400 hover:text-sky-300 font-medium flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i> 重設所有篩選
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 主內容區 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-6 py-4 flex flex-col">
+
+        <!-- ==================== 視角 1：縱軸車次 × 橫軸時間 甘特圖 ==================== -->
+        <div id="view-gantt" class="flex-1 flex flex-col space-y-3">
+            <!-- 甘特圖工具列 (排序、模式、時間軸檢視與手機縮放控制) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col gap-2.5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- 縱軸排序方式 -->
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <span class="text-slate-400"><i class="fa-solid fa-arrow-down-up-across-line mr-1"></i>縱軸排序:</span>
+                            <select id="gantt-sort" onchange="renderGanttView()" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 font-medium focus:outline-none focus:border-sky-500">
+                                <option value="TIME_ASC">依開車時間 (00:00 → 24:00)</option>
+                                <option value="TRAIN_NO">依車次號碼 (小 → 大)</option>
+                                <option value="PAGE_NO">依班表頁數 (第1頁 → 第53頁)</option>
+                            </select>
+                        </div>
+
+                        <!-- 同車次合併或分開列 -->
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 select-none">
+                                <input type="checkbox" id="group-same-train" onchange="renderGanttView()" checked class="rounded text-sky-500 focus:ring-0 bg-slate-900 border-slate-600">
+                                <span class="text-slate-200">同車次合併於同一列</span>
+                            </label>
+                        </div>
+
+                        <!-- 只看壓到時間軸的車次 -->
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer bg-rose-950/50 hover:bg-rose-900/50 px-2.5 py-1.5 rounded-lg border border-rose-500/40 select-none">
+                                <input type="checkbox" id="only-active-timeline" onchange="renderGanttView()" class="rounded text-rose-500 focus:ring-0 bg-slate-900 border-rose-500">
+                                <span class="text-rose-300 font-medium">🔴 只顯示壓到時間軸的車次</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 橫軸時間基準設定與縮放控制 -->
+                    <div class="flex flex-wrap items-center gap-2 ml-auto">
+                        <!-- 自訂或即時時間軸控制 -->
+                        <div class="flex items-center bg-slate-800 rounded-lg border border-rose-500/40 px-2 py-1 text-xs gap-1.5">
+                            <span class="text-rose-400 font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-grip-lines-vertical"></i>時間軸:
+                            </span>
+                            <input type="time" id="custom-timeline-input" onchange="setCustomTimeline(this.value)" class="bg-slate-900 text-white font-mono text-xs px-1.5 py-0.5 rounded border border-slate-700 focus:outline-none focus:border-rose-500">
+                            <button onclick="resetToRealTime()" id="btn-realtime-mode" class="px-2 py-0.5 rounded bg-rose-600 text-white font-medium text-[11px] hover:bg-rose-500 transition" title="切回現在即時時刻並定位">
+                                現在時刻
+                            </button>
+                        </div>
+
+                        <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700 p-0.5 text-xs">
+                            <button onclick="changeZoom(-15)" class="px-2 py-1 hover:bg-slate-700 rounded text-slate-300" title="縮小時間軸"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                            <span id="zoom-label" class="px-2 font-mono text-slate-300">標準</span>
+                            <button onclick="changeZoom(15)" class="px-2 py-1 hover:bg-slate-700 rounded text-slate-300" title="放大時間軸"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 壓到時間軸車次即時清單橫條 -->
+                <div id="intersecting-trains-banner" class="bg-rose-950/30 border border-rose-500/30 rounded-xl px-3 py-2 flex flex-wrap items-center gap-2 text-xs">
+                    <!-- 由 JS 動態填入目前壓到時間軸的車次 -->
+                </div>
+            </div>
+
+            <!-- 手機版滑動提示 -->
+            <div class="flex flex-wrap items-center justify-between text-[11px] text-slate-400 px-1 gap-1">
+                <span><i class="fa-solid fa-hand-pointer mr-1 text-sky-400"></i>左右滑動時間軸，點擊上方時間刻度可移動紅線、點擊車次查看交接</span>
+                <span class="text-rose-400 font-medium">🔴 紅框代表該車次正壓在時間軸線上</span>
+            </div>
+
+            <!-- 甘特圖本體容器 -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex-1 flex flex-col">
+                <div id="gantt-scroll-container" class="overflow-x-auto overflow-y-auto max-h-[72vh] relative select-none">
+                    <!-- 由 JavaScript 動態繪製固定左欄與 00:00~26:00 時間軸 -->
+                    <div id="gantt-canvas" class="min-w-max relative"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 視角 2：依班表頁數檢視 (第 1 頁 ~ 第 53 頁) ==================== -->
+        <div id="view-pages" class="hidden flex-1 flex flex-col space-y-4">
+            <!-- 快速選頁導航器 -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+                            <i class="fa-solid fa-clipboard-list text-sky-400"></i>
+                            <span>班表頁次快速選擇</span>
+                        </h2>
+                        <span class="text-xs text-slate-400">(點擊頁碼直接檢視該班表完整流程與外站折返時間)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="showAllPagesGrid()" id="btn-show-all-pages" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-sky-400 border border-slate-700">
+                            顯示全部符合頁次總覽
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 1~53 頁按鈕矩陣 (可收合或橫滑) -->
+                <div id="page-pills-container" class="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5">
+                    <!-- JS 動態生成 1~53 按鈕 -->
+                </div>
+            </div>
+
+            <!-- 班表頁卡片清單容器 -->
+            <div id="pages-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- JS 動態生成每頁詳細行程與第1天/第2天折返時間分析 -->
+            </div>
+        </div>
+
+        <!-- ==================== 視角 3：樹林交接班 & 重複車次專區 ==================== -->
+        <div id="view-handover" class="hidden flex-1 flex flex-col space-y-4">
+            <div class="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl p-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                        <i class="fa-solid fa-people-arrows text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-base text-white">樹林站交接班 / 跨頁重複車次統整</h2>
+                        <p class="text-xs sm:text-sm text-slate-300 mt-1">
+                            系統自動比對全 53 頁班表，將**相同車次（含樹林交接續駛、不同星期區間、或同車次多段值乘）**自動串聯在一起，方便您一眼查閱上一棒是哪一頁班表、下一棒交給哪一頁班表！
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="handover-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- JS 動態生成交接車次卡片 -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 車次詳細資訊與交接班互動視窗 (Modal) -->
+    <div id="train-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity">
+        <div class="bg-slate-900 border-t sm:border border-slate-700 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[88vh] flex flex-col animate-fade-in">
+            <!-- Modal 頂部標題 -->
+            <div class="px-5 py-4 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span id="modal-train-badge" class="px-3 py-1 rounded-lg font-mono font-bold text-base bg-sky-600 text-white">1161</span>
+                    <div>
+                        <h3 id="modal-title" class="font-bold text-white text-sm sm:text-base">車次詳細資訊</h3>
+                        <p id="modal-subtitle" class="text-xs text-slate-400">第 2 頁班表</p>
+                    </div>
+                </div>
+                <button onclick="closeTrainModal()" class="w-8 h-8 rounded-full bg-slate-700/80 hover:bg-slate-600 flex items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal 內容區 -->
+            <div id="modal-body" class="p-5 overflow-y-auto space-y-4 text-sm">
+                <!-- JS 動態填入 -->
+            </div>
+
+            <!-- Modal 底部按鈕 -->
+            <div class="px-5 py-3.5 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between gap-3">
+                <button id="modal-pin-btn" onclick="" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium text-xs sm:text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-thumbtack text-amber-400"></i>
+                    <span>釘選此頁班表</span>
+                </button>
+                <button id="modal-jump-page-btn" onclick="" class="flex-1 py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-600/30">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>查看整頁班表流程</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁尾資訊 -->
+    <footer class="border-t border-slate-800/80 py-4 px-4 text-center text-xs text-slate-500 mt-6">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>🚆 列車長工作班表統整查詢系統 • 台北車班林崇本車長製作（僅供參考、不保證資料正確、也不保證更新）</span>
+            <span>支援半點時刻 (.5 = 30秒) 精準定位與樹林站交接班串聯</span>
+        </div>
+    </footer>
+
+    <!-- 核心資料與邏輯腳本 -->
+    <script>
+        // ============================================================================
+        // 1. 完整 53 頁班表原始資料庫 (一字不漏完整建檔)
+        // 格式: [車次, 開車時間, 出發站, 抵達時間, 抵達站, 行駛日/備註]
+        // ============================================================================
+        const RAW_SCHEDULE_PAGES = {
+            1: [
+                ["4193便", "18:45", "樹林", "18:51", "樹調", ""],
+                ["4048", "19:43", "樹調", "22:32", "蘇澳", ""],
+                ["4137", "08:49", "蘇澳", "12:07", "樹林", ""]
+            ],
+            2: [
+                ["1161", "11:22", "樹林", "12:59", "新竹", ""],
+                ["1212", "14:27", "新竹", "16:05", "樹林", ""],
+                ["277便", "17:55.5", "樹林", "18:11", "桃園", ""],
+                ["4006", "05:46", "桃園", "08:57", "和平", ""],
+                ["4019", "09:32", "和平", "10:21", "宜蘭", ""],
+                ["219", "13:25", "宜蘭", "15:12", "樹林", ""]
+            ],
+            3: [
+                ["1161", "11:22", "樹林", "12:59", "新竹", ""],
+                ["1212", "14:27", "新竹", "16:05", "樹林", ""],
+                ["4008A", "06:03", "樹林", "06:10", "板橋", ""],
+                ["4008", "06:12", "板橋", "08:57", "和平", ""],
+                ["4019", "09:32", "和平", "10:21", "宜蘭", ""],
+                ["219", "13:25", "宜蘭", "15:12", "樹林", ""]
+            ],
+            4: [
+                ["1147", "09:45.5", "樹林", "12:00", "苗栗", ""],
+                ["1228", "15:06", "苗栗", "17:13", "樹林", ""],
+                ["4193便", "18:45", "樹林", "18:51", "樹調", ""],
+                ["4026便", "09:33", "樹調", "09:39", "樹林", ""]
+            ],
+            5: [
+                ["1207", "15:41.5", "樹林", "17:51", "苗栗", ""],
+                ["1268", "19:00", "苗栗", "19:34", "新竹", ""],
+                ["1272便", "20:42", "新竹", "21:07", "新富", ""],
+                ["4154", "06:37", "富岡基地", "09:09", "瑞芳", ""],
+                ["4131", "09:36", "瑞芳", "10:51", "樹林", ""]
+            ],
+            6: [
+                ["432", "14:38", "樹林", "19:20", "台東", ""],
+                ["411", "07:43", "台東", "12:43", "樹林", "二、三、四行駛"],
+                ["401便", "04:58", "台東", "09:05", "樹林", "週一行駛"]
+            ],
+            7: [
+                ["432", "14:38", "樹林", "19:20", "台東", ""],
+                ["405", "06:13", "台東", "10:43", "樹林", "五、六、日行駛"]
+            ],
+            8: [
+                ["1152", "10:01", "樹林", "11:12", "基隆", ""],
+                ["1191便", "13:19", "基隆", "14:20.5", "樹林", ""],
+                ["1223", "17:21.5", "樹林", "18:49", "新竹", ""],
+                ["1268便", "19:35", "新竹", "19:58", "新富", ""],
+                ["1124", "05:43", "富岡基地", "08:18", "基隆", ""],
+                ["1161", "10:18", "基隆", "11:21", "樹林", ""]
+            ],
+            9: [
+                ["1217", "16:31.5", "樹林", "18:50", "苗栗", ""],
+                ["1128", "05:15", "苗栗", "08:27", "基隆", ""],
+                ["1128B", "08:50", "基隆", "09:02", "七堵", ""],
+                ["1152便", "11:00", "七堵", "11:12", "基隆", ""],
+                ["1177", "11:31", "基隆", "12:34.5", "樹林", ""]
+            ],
+            10: [
+                ["4188便", "13:13", "樹林", "13:21", "板橋", ""],
+                ["165", "14:00", "板橋", "18:20.5", "潮州", ""],
+                ["110", "06:22", "潮州", "11:27", "七堵", ""],
+                ["1177便", "11:46", "七堵", "12:34.5", "樹林", ""]
+            ],
+            11: [
+                ["2193", "12:01.5", "樹林", "13:30.5", "新竹", ""],
+                ["2194", "15:06", "新竹", "17:47", "基隆", ""],
+                ["2133", "05:00", "基隆", "07:28", "新竹", ""],
+                ["2008便", "07:36", "新竹", "08:42.5", "樹林", ""]
+            ],
+            12: [
+                ["4037", "23:09.5", "樹林", "23:26", "桃園", "五、六停駛"],
+                ["1298B便", "23:51", "桃園", "00:07", "樹林", ""],
+                ["1008A", "06:18", "樹林", "06:53", "埔心", "六、日、例假日停駛"],
+                ["1008", "07:17", "埔心", "08:53", "七堵", "六、日、例假日停駛"],
+                ["1008B", "09:04", "七堵", "09:49", "樹林", "六、日、例假日停駛"]
+            ],
+            13: [
+                ["236", "15:23", "樹林", "18:01", "花蓮", ""],
+                ["237", "19:38", "花蓮", "22:21", "樹林", ""],
+                ["127A", "10:49", "樹林", "11:14", "松山", ""],
+                ["127", "11:28", "松山", "13:37", "彰化", ""],
+                ["180便", "14:09", "彰化", "16:35.5", "樹林", "六、日行駛"]
+            ],
+            14: [
+                ["1177", "12:35.5", "樹林", "14:48", "苗栗", ""],
+                ["1238", "16:10", "苗栗", "18:24", "樹林", ""],
+                ["1106", "05:24", "樹林", "06:28", "基隆", ""],
+                ["2153", "06:58", "基隆", "08:00.5", "樹林", ""]
+            ],
+            15: [
+                ["1226A", "16:22", "樹林", "16:28", "樹調", ""],
+                ["1226", "17:12", "樹調", "18:28", "基隆", ""],
+                ["1226B", "18:40", "基隆", "18:51", "七堵", ""],
+                ["1254", "20:41", "七堵", "20:57", "基隆", ""],
+                ["1271", "21:29", "基隆", "23:52", "新竹", ""],
+                ["1162", "09:16", "新竹", "11:57", "基隆", ""],
+                ["1203", "13:58", "基隆", "14:59.5", "樹林", ""]
+            ],
+            16: [
+                ["4177便", "15:53", "樹林", "15:59", "樹調", ""],
+                ["1276便", "21:45", "樹調", "21:51", "樹林", ""],
+                ["4003便", "08:15", "樹林", "08:21", "樹調", ""],
+                ["4198便", "14:01", "樹調", "14:07", "樹林", ""]
+            ],
+            17: [
+                ["1166", "12:32", "樹林", "13:38", "瑞芳", ""],
+                ["1166B", "13:49", "瑞芳", "14:02", "七堵", ""],
+                ["179", "16:04", "七堵", "19:25", "彰化", ""],
+                ["141便", "20:03", "彰化", "20:18", "員林", ""],
+                ["472", "06:00", "員林", "08:22.5", "樹林", ""]
+            ],
+            18: [
+                ["2037便", "18:42.5", "樹林", "19:57.5", "新竹", ""],
+                ["1282", "21:33", "新竹", "23:46", "南港", ""],
+                ["1048便", "00:02.5", "南港", "00:21", "七堵", ""],
+                ["1138便", "09:59", "七堵", "10:12", "基隆", ""],
+                ["2193", "11:00", "基隆", "12:00.5", "樹林", ""]
+            ],
+            19: [
+                ["1203便", "15:01.5", "樹林", "16:01.5", "新富", ""],
+                ["4046A", "17:00", "富岡基地", "17:14", "新豐", ""],
+                ["4046", "17:32", "新豐", "18:38", "樹林", ""],
+                ["4240便", "19:28", "樹林", "20:44", "瑞芳", ""],
+                ["1127A", "06:39", "瑞芳", "06:52", "七堵", ""],
+                ["1127", "06:55", "七堵", "09:49", "苗栗", ""],
+                ["1198", "12:11", "苗栗", "14:19.5", "樹林", ""]
+            ],
+            20: [
+                ["1194", "13:41", "樹林", "15:03", "瑞芳", ""],
+                ["1223", "16:09", "瑞芳", "17:20.5", "樹林", ""],
+                ["1109", "05:13", "樹林", "06:31", "新竹", ""],
+                ["2123便", "06:47", "新竹", "07:06", "竹南", ""],
+                ["1152", "08:08", "竹南", "10:00", "樹林", ""]
+            ],
+            21: [
+                ["4236", "18:28", "樹林", "19:37", "瑞芳", ""],
+                ["4215", "19:57", "瑞芳", "21:15", "樹林", ""],
+                ["1281", "22:57.5", "樹林", "00:16", "新竹", ""],
+                ["1182", "11:33", "新竹", "14:10", "基隆", "六、日、例假日停駛"],
+                ["1207", "14:39", "基隆", "15:40.5", "樹林", "六、日、例假日停駛"]
+            ],
+            22: [
+                ["4236", "18:28", "樹林", "19:37", "瑞芳", ""],
+                ["4215", "19:57", "瑞芳", "21:15", "樹林", ""],
+                ["1281", "22:57.5", "樹林", "00:16", "新竹", ""],
+                ["1168便", "09:45", "新竹", "10:17.5", "新富", ""],
+                ["1180", "11:38", "富岡基地", "14:10", "基隆", "六、日、例假日行駛"],
+                ["1207", "14:39", "基隆", "15:40.5", "樹林", "六、日、例假日行駛"]
+            ],
+            23: [
+                ["1203", "15:01.5", "樹林", "16:21", "富岡基地", ""],
+                ["1254", "18:21", "富岡基地", "20:39", "七堵", ""],
+                ["1129A", "06:24", "七堵", "06:35", "基隆", ""],
+                ["1129", "06:47", "基隆", "09:15", "富岡基地", ""],
+                ["1174", "10:26", "富岡基地", "11:50.5", "樹林", ""]
+            ],
+            24: [
+                ["224", "11:36", "樹林", "14:45", "花蓮", ""],
+                ["1", "16:50", "花蓮", "19:32", "台北", "五、六、日、一行駛"],
+                ["431便", "19:52", "台北", "20:07", "樹林", ""],
+                ["1106便", "05:24", "樹林", "05:55", "南港", ""],
+                ["1110", "06:38", "南港", "07:12", "基隆", ""],
+                ["1135", "07:24", "基隆", "09:56", "富岡基地", "六、日、例假日停駛"],
+                ["1168便", "10:18.5", "新富", "11:18", "樹林", "六、日、例假日停駛"],
+                ["1139", "08:19", "基隆", "08:31", "七堵", "六、日、例假日行駛"],
+                ["1139便", "08:32", "七堵", "09:21.5", "樹林", "六、日、例假日行駛"]
+            ],
+            25: [
+                ["224", "11:36", "樹林", "14:45", "花蓮", "二、三、四行駛"],
+                ["231便", "16:45", "花蓮", "19:25", "樹林", ""],
+                ["1106便", "05:24", "樹林", "05:55", "南港", ""],
+                ["1110", "06:38", "南港", "07:12", "基隆", ""],
+                ["1135", "07:24", "基隆", "09:56", "富岡基地", "六、日、例假日停駛"],
+                ["1168便", "10:18.5", "新富", "11:18", "樹林", "六、日、例假日停駛"],
+                ["1139", "08:19", "基隆", "08:31", "七堵", "六、日、例假日行駛"],
+                ["1139便", "08:32", "七堵", "09:21.5", "樹林", "六、日、例假日行駛"]
+            ],
+            26: [
+                ["4234", "17:49", "樹林", "19:34", "福隆", ""],
+                ["4234B", "19:36", "福隆", "19:44", "大里", ""],
+                ["4225A", "19:57", "大里", "20:06", "福隆", ""],
+                ["4225", "20:24", "福隆", "21:26", "七堵", ""],
+                ["1108", "06:44", "七堵", "06:57", "基隆", ""],
+                ["1131", "07:13", "基隆", "09:55", "新竹", ""],
+                ["1192", "12:22", "新竹", "14:03", "樹林", ""]
+            ],
+            27: [
+                ["1251", "20:02.5", "樹林", "21:51", "竹南", ""],
+                ["152便", "22:33", "竹南", "23:16", "中壢", ""],
+                ["4138", "05:16", "中壢", "05:49", "樹林", ""]
+            ],
+            28: [
+                ["4027", "18:47.5", "樹林", "19:46", "湖口", ""],
+                ["4027B", "20:02", "湖口", "20:13", "富岡基地", ""],
+                ["1048", "22:30", "富岡基地", "00:21", "七堵", ""],
+                ["1142便", "10:14", "七堵", "10:26", "基隆", ""],
+                ["1187", "12:27", "基隆", "13:32.5", "樹林", ""]
+            ],
+            29: [
+                ["236", "15:23", "樹林", "18:01", "花蓮", ""],
+                ["443", "20:17", "花蓮", "22:48", "樹林", "週日行駛"]
+            ],
+            30: [
+                ["411便", "12:46", "樹林", "12:52", "樹調", ""],
+                ["234", "13:55", "樹調", "16:44", "花蓮", ""],
+                ["234B", "17:02", "花蓮", "17:08", "吉安", ""],
+                ["233A", "17:44", "吉安", "17:50", "花蓮", ""],
+                ["237", "19:38", "花蓮", "22:21", "樹林", "週日行駛"]
+            ],
+            31: [
+                ["1174", "11:55", "樹林", "13:02", "基隆", ""],
+                ["1191便", "13:19", "基隆", "13:31", "七堵", ""],
+                ["1227A", "15:56", "七堵", "16:07", "基隆", ""],
+                ["1227", "16:23", "基隆", "19:56", "苗栗", ""],
+                ["272", "05:24", "苗栗", "06:58.5", "樹林", ""],
+                ["171A", "08:33", "樹林", "09:00", "松山", ""],
+                ["171便", "09:15", "松山", "09:38", "樹林", ""]
+            ],
+            32: [
+                ["1231便", "17:50.5", "樹林", "18:52", "新富", ""],
+                ["1274", "19:58", "富岡基地", "22:43", "基隆", ""],
+                ["1274B", "23:04", "基隆", "23:14", "七堵", ""],
+                ["4152", "08:30", "七堵", "09:18", "福隆", ""],
+                ["4135", "09:42", "福隆", "11:28", "樹林", ""]
+            ],
+            33: [
+                ["4216便", "16:12", "樹林", "16:20", "板橋", ""],
+                ["273", "16:53", "板橋", "18:39", "彰化", ""],
+                ["288", "19:10", "彰化", "21:07", "板橋", ""],
+                ["1038便", "21:23", "板橋", "22:04", "七堵", ""],
+                ["1112便", "07:11", "七堵", "07:23", "基隆", ""],
+                ["1143", "07:55", "基隆", "10:13", "富岡基地", ""],
+                ["1194", "12:15", "富岡基地", "13:36", "樹林", ""]
+            ],
+            34: [
+                ["401便", "09:08", "樹林", "09:14", "樹調", ""],
+                ["442便", "16:29", "樹調", "16:35", "樹林", ""],
+                ["4193便", "18:45", "樹林", "18:51", "樹調", ""],
+                ["4162便", "08:49", "樹調", "08:55", "樹林", ""]
+            ],
+            35: [
+                ["179便", "16:49", "樹林", "17:51.5", "新竹", ""],
+                ["1268", "19:35", "新竹", "22:23", "基隆", ""],
+                ["1268B", "22:35", "基隆", "22:46", "七堵", ""],
+                ["1289便", "23:23", "七堵", "00:13", "樹林", ""],
+                ["1170", "12:00", "樹林", "12:52", "七堵", ""],
+                ["1178便", "13:17", "七堵", "13:29", "基隆", ""],
+                ["1217", "15:26", "基隆", "16:30.5", "樹林", "五、六行駛"]
+            ],
+            36: [
+                ["1198", "14:21.5", "樹林", "15:25.5", "基隆", ""],
+                ["2253", "17:02", "基隆", "19:36.5", "新竹", ""],
+                ["1122", "05:29", "新竹", "08:03", "基隆", ""],
+                ["1147", "08:41", "基隆", "09:44.5", "樹林", ""]
+            ],
+            37: [
+                ["426", "12:20", "樹林", "16:30", "台東", ""],
+                ["401", "04:58", "台東", "09:05", "樹林", ""]
+            ],
+            38: [
+                ["432便", "14:38", "樹林", "19:20", "台東", "週四行駛"],
+                ["436", "17:41", "樹林", "22:05", "台東", "五、六、日行駛"],
+                ["411", "07:43", "台東", "12:43", "樹林", "五、六、日、一行駛"]
+            ],
+            39: [
+                ["179便", "16:49", "樹林", "17:51.5", "新竹", ""],
+                ["2042", "19:11", "新竹", "21:15", "七堵", ""],
+                ["1289A", "22:41", "七堵", "22:52", "基隆", ""],
+                ["1289", "23:10", "基隆", "00:13", "樹林", ""]
+            ],
+            40: [
+                ["438", "18:13", "樹林", "22:45", "台東", ""],
+                ["415", "09:41", "台東", "14:34", "樹林", ""]
+            ],
+            41: [
+                ["442", "16:44", "樹林", "19:43", "花蓮", ""],
+                ["4013", "06:05", "花蓮", "09:32", "樹林", ""]
+            ],
+            42: [
+                ["1238", "18:25", "樹林", "19:29", "基隆", ""],
+                ["1261便", "19:55", "基隆", "20:07", "七堵", ""],
+                ["4225", "21:27", "七堵", "23:34", "富岡基地", ""],
+                ["1137便", "09:43.5", "新富", "10:07", "新竹", ""],
+                ["1157", "12:15", "新竹", "12:57", "苗栗", ""],
+                ["1208", "13:13", "苗栗", "15:18", "樹林", ""]
+            ],
+            43: [
+                ["1170", "12:00", "樹林", "12:52", "七堵", "日、一、二、三、四行駛"],
+                ["1178便", "13:17", "七堵", "13:29", "基隆", "日、一、二、三、四行駛"],
+                ["1217", "15:26", "基隆", "16:30.5", "樹林", "日、一、二、三、四行駛"],
+                ["1227便", "17:29.5", "樹林", "18:29.5", "新富", "日、一、二、三、四行駛"],
+                ["1120", "05:19", "富岡基地", "07:44", "基隆", "六、日、例假日停駛"],
+                ["1141", "08:19", "基隆", "08:31", "七堵", "六、日、例假日停駛"],
+                ["1141便", "08:32", "七堵", "09:21.5", "樹林", "六、日、例假日停駛"]
+            ],
+            44: [
+                ["4151便", "13:30", "樹林", "13:36", "樹調", ""],
+                ["4248便", "20:59", "樹調", "21:05", "樹林", ""],
+                ["4144", "06:23", "樹林", "07:30", "瑞芳", ""],
+                ["4119", "08:13", "瑞芳", "09:26.5", "樹林", ""]
+            ],
+            45: [
+                ["246便", "18:18", "樹林", "18:36", "台北", "五、六、日、一行駛"],
+                ["1B", "19:36", "台北", "19:58", "樹調", "五、六、日、一行駛"],
+                ["1N", "20:37", "樹調", "21:40", "七堵", "五、六、日、一行駛"],
+                ["4235便", "21:56", "七堵", "22:43.5", "樹林", "五、六、日、一行駛"]
+            ],
+            46: [
+                ["1208", "15:19", "樹林", "16:25", "基隆", ""],
+                ["1241", "18:18", "基隆", "20:51", "新竹", ""],
+                ["1134", "06:41", "新竹", "08:14.5", "樹林", ""],
+                ["4119", "09:28.5", "樹林", "10:52", "富岡基地", ""],
+                ["1178便", "11:29.5", "新富", "12:24", "樹林", ""]
+            ],
+            47: [
+                ["1192", "14:04", "樹林", "15:06", "基隆", ""],
+                ["1235便", "17:29", "基隆", "18:32.5", "樹林", ""],
+                ["4209", "20:38.5", "樹林", "21:47", "富岡基地", ""],
+                ["1136", "07:16", "富岡基地", "09:52", "瑞芳", ""],
+                ["4017", "10:03", "瑞芳", "11:06", "樹林", ""]
+            ],
+            48: [
+                ["1187", "13:33.5", "樹林", "15:47", "苗栗", ""],
+                ["1258", "18:08", "苗栗", "20:08", "樹林", ""]
+            ],
+            49: [
+                ["1212", "16:06", "樹林", "17:10", "基隆", ""],
+                ["1251", "19:00", "基隆", "20:01.5", "樹林", ""],
+                ["406", "06:10", "樹林", "08:57", "花蓮", ""],
+                ["217", "11:02", "花蓮", "13:38", "樹林", ""]
+            ],
+            50: [
+                ["411便", "12:46", "樹林", "12:52", "樹調", ""],
+                ["6615A", "13:55", "樹調", "15:41", "二結", ""],
+                ["6615", "16:10", "二結", "18:24", "樹林", ""],
+                ["421便", "17:18", "樹林", "17:24", "樹調", ""],
+                ["6616", "18:39", "樹調", "20:51", "宜蘭", ""],
+                ["6616B", "21:01", "宜蘭", "22:35", "樹林", ""]
+            ],
+            51: [
+                ["218便", "10:31", "樹林", "12:04.5", "宜蘭", ""],
+                ["6652(回送)", "13:05", "宜蘭", "13:11", "二結", ""],
+                ["6655", "13:52", "二結", "19:00", "樹林", ""],
+                ["6652", "07:25", "樹林", "12:55", "宜蘭", ""],
+                ["219便", "13:25", "宜蘭", "15:12", "樹林", ""]
+            ],
+            52: [
+                ["554", "20:38", "樹林", "00:53", "花蓮", "行包"],
+                ["653", "15:13", "花蓮", "19:37.5", "樹林", "行包"]
+            ],
+            53: [
+                ["653", "19:39", "樹林", "22:59", "彰化", "行包"],
+                ["554", "17:23", "彰化", "20:35", "樹林", "行包"]
+            ]
+        };
+
+        // ============================================================================
+        // 2. 資料解析與正規化處理
+        // ============================================================================
+        let allRuns = [];
+        let baseTrainMap = {}; // 記錄同一個純數字/基礎車次出現的所有班段
+        let currentView = 'gantt';
+        let hourWidthPx = 70; // 甘特圖每小時像素寬度 (支援縮放)
+        let pinnedPage = localStorage.getItem('conductor_pinned_page') ? parseInt(localStorage.getItem('conductor_pinned_page')) : null;
+
+        // 時間軸基準分鐘數 (預設跟隨現在系統時間，使用者也可手動點選或輸入任意時刻查看壓線車次)
+        let isCustomTimeline = false;
+        let customTimelineMins = 0;
+
+        function getActiveTimelineMinutes() {
+            if (isCustomTimeline) return customTimelineMins;
+            const now = new Date();
+            return now.getHours() * 60 + now.getMinutes();
+        }
+
+        function formatMinsToHHMM(totalMins) {
+            const norm = ((Math.floor(totalMins) % 1440) + 1440) % 1440;
+            const h = String(Math.floor(norm / 60)).padStart(2, '0');
+            const m = String(norm % 60).padStart(2, '0');
+            return `${h}:${m}`;
+        }
+
+        // 判斷某筆車次區間是否「壓到時間軸」(涵蓋跨午夜車次，例如 22:57.5~00:16 在 00:10 或 23:30 都會判定為壓線)
+        function isRunTouchingTimeline(run, activeMins) {
+            // 情況 1: 一般時段或當日比對
+            if (activeMins >= run.depMin && activeMins <= run.arrMin) {
+                return true;
+            }
+            // 情況 2: 跨午夜班次 (arrMin > 1440)，若目前時間在凌晨 (例如 00:10 -> activeMins=10)，加 1440 後比對 24:10
+            if (run.isOvernightRun && (activeMins + 1440) >= run.depMin && (activeMins + 1440) <= run.arrMin) {
+                return true;
+            }
+            return false;
+        }
+
+        function setCustomTimeline(timeVal) {
+            if (!timeVal) return;
+            const parts = timeVal.split(':');
+            if (parts.length >= 2) {
+                customTimelineMins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+                isCustomTimeline = true;
+                updateTimelineModeUI();
+                renderGanttView();
+            }
+        }
+
+        function setTimelineByClick(event, timelineWidth) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickedMins = Math.max(0, Math.min(25 * 60 - 1, Math.round((clickX / hourWidthPx) * 60)));
+            customTimelineMins = clickedMins % 1440;
+            isCustomTimeline = true;
+            updateTimelineModeUI();
+            renderGanttView();
+        }
+
+        function resetToRealTime() {
+            isCustomTimeline = false;
+            updateTimelineModeUI();
+            renderGanttView();
+            scrollToCurrentTime();
+        }
+
+        function updateTimelineModeUI() {
+            const activeMins = getActiveTimelineMinutes();
+            const inputEl = document.getElementById('custom-timeline-input');
+            if (inputEl) inputEl.value = formatMinsToHHMM(activeMins);
+            const btnReal = document.getElementById('btn-realtime-mode');
+            if (btnReal) {
+                if (isCustomTimeline) {
+                    btnReal.textContent = '切回現在時刻';
+                    btnReal.className = 'px-2 py-0.5 rounded bg-slate-700 hover:bg-rose-600 text-slate-200 hover:text-white font-medium text-[11px] transition';
+                } else {
+                    btnReal.textContent = '即時定位';
+                    btnReal.className = 'px-2 py-0.5 rounded bg-rose-600 text-white font-medium text-[11px] hover:bg-rose-500 transition';
+                }
+            }
+        }
+
+        // 解析時間字串 (例如 "17:55.5" -> 17*60 + 55.5 = 1075.5 分鐘)
+        function parseTimeToMinutes(timeStr) {
+            const parts = timeStr.trim().split(':');
+            const hours = parseInt(parts[0], 10);
+            const mins = parseFloat(parts[1]);
+            return hours * 60 + mins;
+        }
+
+        // 取出基礎車次編號 (例如 "4193便" -> "4193", "6652(回送)" -> "6652", "1128B" -> "1128B")
+        function extractBaseTrainNo(trainStr) {
+            return trainStr.replace(/便|\(回送\)/g, '').trim();
+        }
+
+        // 取出純數字供排序使用
+        function extractNumericTrainNo(trainStr) {
+            const match = trainStr.match(/\d+/);
+            return match ? parseInt(match[0], 10) : 99999;
+        }
+
+        // 判斷該車次在指定星期是否行駛 (1:週一, 2:週二~四, 5:週五, 6:週六, 7:週日)
+        function runsOnDay(note, dayCode) {
+            if (!note || dayCode === 'ALL') return true;
+            const d = parseInt(dayCode, 10);
+            if (note.includes('五、六停駛')) {
+                return d !== 5 && d !== 6;
+            }
+            if (note.includes('六、日、例假日停駛')) {
+                return d !== 6 && d !== 7;
+            }
+            if (note.includes('六、日、例假日行駛') || note.includes('六、日行駛')) {
+                return d === 6 || d === 7;
+            }
+            if (note.includes('五、六、日、一行駛')) {
+                return d === 5 || d === 6 || d === 7 || d === 1;
+            }
+            if (note.includes('五、六、日行駛')) {
+                return d === 5 || d === 6 || d === 7;
+            }
+            if (note.includes('五、六行駛')) {
+                return d === 5 || d === 6;
+            }
+            if (note.includes('日、一、二、三、四行駛')) {
+                return d === 7 || d === 1 || d === 2;
+            }
+            if (note.includes('二、三、四行駛')) {
+                return d === 2;
+            }
+            if (note.includes('週一行駛')) {
+                return d === 1;
+            }
+            if (note.includes('週四行駛')) {
+                return d === 2;
+            }
+            if (note.includes('週日行駛')) {
+                return d === 7;
+            }
+            return true;
+        }
+
+        // 格式化分鐘差為「X小時Y分」
+        function formatDuration(mins) {
+            const rounded = Math.round(mins * 10) / 10;
+            const h = Math.floor(rounded / 60);
+            const m = Math.round((rounded - h * 60) * 10) / 10;
+            if (h > 0) return `${h}小時${m > 0 ? m + '分' : ''}`;
+            return `${m}分`;
+        }
+
+        function initDataset() {
+            allRuns = [];
+            baseTrainMap = {};
+            let idCounter = 1;
+
+            for (let page = 1; page <= 53; page++) {
+                const items = RAW_SCHEDULE_PAGES[page] || [];
+                let currentDayOffset = 1; // 第1天 或 第2天
+                let prevDepMin = -1;
+
+                items.forEach((raw, idx) => {
+                    const [trainNo, depTime, fromStation, arrTime, toStation, note] = raw;
+                    const depMin = parseTimeToMinutes(depTime);
+                    let arrMin = parseTimeToMinutes(arrTime);
+
+                    // 跨午夜車次處理 (例如 22:57.5 開 -> 00:16 到)
+                    let isOvernightRun = false;
+                    if (arrMin < depMin) {
+                        arrMin += 1440;
+                        isOvernightRun = true;
+                    }
+
+                    // 計算班表頁內的跨日 (當後一班車開車時間明顯早於前一班車，代表外宿進入第2天)
+                    if (idx > 0 && depMin < prevDepMin - 180) {
+                        currentDayOffset += 1;
+                    }
+                    prevDepMin = depMin;
+
+                    const baseNo = extractBaseTrainNo(trainNo);
+                    const isDeadhead = trainNo.includes('便');
+                    const isParcel = note.includes('行包') || trainNo.includes('回送');
+
+                    const runObj = {
+                        id: idCounter++,
+                        page,
+                        seqInPage: idx + 1,
+                        dayInShift: currentDayOffset,
+                        trainNo,
+                        baseNo,
+                        numericNo: extractNumericTrainNo(trainNo),
+                        depTime,
+                        fromStation,
+                        arrTime,
+                        toStation,
+                        depMin,
+                        arrMin,
+                        durationMin: arrMin - depMin,
+                        isOvernightRun,
+                        note: note || '',
+                        isDeadhead,
+                        isParcel
+                    };
+
+                    allRuns.push(runObj);
+                    if (!baseTrainMap[baseNo]) baseTrainMap[baseNo] = [];
+                    baseTrainMap[baseNo].push(runObj);
+                });
+            }
+
+            // 標記哪些車次屬於「重複/樹林交接車次」
+            allRuns.forEach(run => {
+                const group = baseTrainMap[run.baseNo];
+                run.isMultiSegment = group.length > 1;
+            });
+        }
+
+        // ============================================================================
+        // 3. 篩選器邏輯與下拉選單初始化
+        // ============================================================================
+        function populateSelectOptions() {
+            const stationSet = new Set();
+            allRuns.forEach(r => {
+                stationSet.add(r.fromStation);
+                stationSet.add(r.toStation);
+            });
+
+            const stationSelect = document.getElementById('station-filter');
+            Array.from(stationSet).sort().forEach(st => {
+                const opt = document.createElement('option');
+                opt.value = st;
+                opt.textContent = `📍 ${st}`;
+                stationSelect.appendChild(opt);
+            });
+
+            const pageSelect = document.getElementById('page-filter');
+            for (let p = 1; p <= 53; p++) {
+                const firstRun = RAW_SCHEDULE_PAGES[p][0];
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = `第 ${p} 頁 (${firstRun[0]} ${firstRun[2]}→${firstRun[4]}...)`;
+                pageSelect.appendChild(opt);
+            }
+        }
+
+        function getFilteredRuns() {
+            const query = document.getElementById('search-input').value.trim().toLowerCase();
+            const station = document.getElementById('station-filter').value;
+            const page = document.getElementById('page-filter').value;
+            const day = document.getElementById('day-filter').value;
+            const type = document.getElementById('type-filter').value;
+
+            // 控制清除按鈕與重設按鈕顯示
+            document.getElementById('clear-search-btn').classList.toggle('hidden', !query);
+            const hasAnyFilter = query !== '' || station !== 'ALL' || page !== 'ALL' || day !== 'ALL' || type !== 'ALL';
+            document.getElementById('reset-filter-btn').classList.toggle('hidden', !hasAnyFilter);
+
+            return allRuns.filter(r => {
+                if (page !== 'ALL' && r.page !== parseInt(page, 10)) return false;
+                if (station !== 'ALL' && r.fromStation !== station && r.toStation !== station) return false;
+                if (!runsOnDay(r.note, day)) return false;
+
+                if (type === 'DUTY' && r.isDeadhead) return false;
+                if (type === 'DEADHEAD' && !r.isDeadhead) return false;
+                if (type === 'PARCEL' && !r.isParcel) return false;
+                if (type === 'OVERLAP' && !r.isMultiSegment) return false;
+
+                if (query) {
+                    const matchTrain = r.trainNo.toLowerCase().includes(query) || r.baseNo.toLowerCase().includes(query);
+                    const matchStation = r.fromStation.toLowerCase().includes(query) || r.toStation.toLowerCase().includes(query);
+                    const matchPage = (`第${r.page}頁` === query) || (`${r.page}` === query);
+                    const matchNote = r.note.toLowerCase().includes(query);
+                    if (!matchTrain && !matchStation && !matchPage && !matchNote) return false;
+                }
+                return true;
+            });
+        }
+
+        function handleFilterChange() {
+            renderActiveView();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            handleFilterChange();
+        }
+
+        function resetAllFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('station-filter').value = 'ALL';
+            document.getElementById('page-filter').value = 'ALL';
+            document.getElementById('day-filter').value = 'ALL';
+            document.getElementById('type-filter').value = 'ALL';
+            handleFilterChange();
+        }
+
+        // ============================================================================
+        // 4. 視角 1：縱軸車次 × 橫軸時間 甘特圖渲染
+        // ============================================================================
+        function getBarColorClass(run) {
+            if (run.isParcel) {
+                return 'bg-gradient-to-r from-purple-600 to-fuchsia-600 border-purple-400/60 text-white shadow-purple-950/50';
+            }
+            if (run.isDeadhead) {
+                return 'bg-gradient-to-r from-amber-600 to-orange-600 border-amber-400/60 text-white shadow-amber-950/50';
+            }
+            if (run.isMultiSegment) {
+                return 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-400/60 text-white shadow-emerald-950/50';
+            }
+            return 'bg-gradient-to-r from-sky-600 to-blue-600 border-sky-400/60 text-white shadow-sky-950/50';
+        }
+
+        function renderGanttView() {
+            const baseFilteredRuns = getFilteredRuns();
+            const sortMode = document.getElementById('gantt-sort').value;
+            const groupSameTrain = document.getElementById('group-same-train').checked;
+            const onlyActiveTimeline = document.getElementById('only-active-timeline').checked;
+            const canvas = document.getElementById('gantt-canvas');
+
+            const activeMins = getActiveTimelineMinutes();
+            const activeTimeStr = formatMinsToHHMM(activeMins);
+            updateTimelineModeUI();
+
+            // 找出目前篩選範圍內所有「壓到時間軸」的車次
+            const touchingRuns = baseFilteredRuns.filter(r => isRunTouchingTimeline(r, activeMins));
+
+            // 更新上方「壓到時間軸車次」即時橫幅
+            const banner = document.getElementById('intersecting-trains-banner');
+            if (banner) {
+                if (touchingRuns.length > 0) {
+                    // 依車次去重顯示快速標籤
+                    const seenKeys = new Set();
+                    let chipsHtml = '';
+                    touchingRuns.forEach(tr => {
+                        const key = `${tr.trainNo}-${tr.depTime}`;
+                        if (!seenKeys.has(key)) {
+                            seenKeys.add(key);
+                            chipsHtml += `
+                                <button onclick="openTrainModal(${tr.id})" class="px-2 py-0.5 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white font-mono font-bold text-[11px] shadow-sm border border-rose-300/60 flex items-center gap-1 transition">
+                                    <span>${tr.trainNo}</span>
+                                    <span class="font-sans font-normal text-[10px] opacity-95">(${tr.fromStation}→${tr.toStation} P.${tr.page})</span>
+                                </button>
+                            `;
+                        }
+                    });
+                    banner.innerHTML = `
+                        <div class="flex items-center gap-1.5 text-rose-300 font-bold shrink-0">
+                            <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                            <span>時間軸 [${activeTimeStr}] 壓線車次 (${seenKeys.size} 班)：</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">${chipsHtml}</div>
+                    `;
+                } else {
+                    banner.innerHTML = `
+                        <div class="flex items-center gap-2 text-slate-400">
+                            <i class="fa-regular fa-clock text-rose-400"></i>
+                            <span>時間軸 <strong>${activeTimeStr}</strong> 目前無車次壓線（可點擊上方時間欄位或直接點時間軸刻度尺測試其他時段）</span>
+                        </div>
+                    `;
+                }
+            }
+
+            // 如果勾選「只顯示壓到時間軸的車次」，則進行過濾
+            const runs = onlyActiveTimeline ? touchingRuns : baseFilteredRuns;
+
+            // 更新統計文字
+            const uniquePages = new Set(runs.map(r => r.page)).size;
+            document.getElementById('stats-counter').textContent = `顯示 ${runs.length} 筆車次區間（涵蓋 ${uniquePages} 頁班表，壓線 ${touchingRuns.length} 筆）`;
+
+            if (runs.length === 0) {
+                canvas.innerHTML = `
+                    <div class="p-12 text-center text-slate-400">
+                        <i class="fa-solid fa-train-tram text-4xl mb-3 text-slate-600"></i>
+                        <p class="text-base font-medium text-slate-300">${onlyActiveTimeline ? `時間軸 ${activeTimeStr} 沒有壓線的車次` : '找不到符合篩選條件的車次'}</p>
+                        <p class="text-xs mt-1">請嘗試調整時間軸時刻、放寬搜尋關鍵字或取消勾選「只顯示壓到時間軸的車次」</p>
+                    </div>`;
+                return;
+            }
+
+            // 建立縱軸列 (Rows)
+            let rows = [];
+            if (groupSameTrain) {
+                const map = new Map();
+                runs.forEach(r => {
+                    const key = r.baseNo;
+                    if (!map.has(key)) {
+                        map.set(key, {
+                            rowTitle: r.baseNo,
+                            numericNo: r.numericNo,
+                            earliestDep: r.depMin,
+                            minPage: r.page,
+                            items: []
+                        });
+                    }
+                    const entry = map.get(key);
+                    entry.items.push(r);
+                    if (r.depMin < entry.earliestDep) entry.earliestDep = r.depMin;
+                    if (r.page < entry.minPage) entry.minPage = r.page;
+                });
+                rows = Array.from(map.values());
+            } else {
+                rows = runs.map(r => ({
+                    rowTitle: r.trainNo,
+                    subTitle: `P.${r.page}`,
+                    numericNo: r.numericNo,
+                    earliestDep: r.depMin,
+                    minPage: r.page,
+                    items: [r]
+                }));
+            }
+
+            // 排序縱軸列
+            rows.sort((a, b) => {
+                if (sortMode === 'TIME_ASC') return a.earliestDep - b.earliestDep || a.numericNo - b.numericNo;
+                if (sortMode === 'TRAIN_NO') return a.numericNo - b.numericNo || a.earliestDep - b.earliestDep;
+                if (sortMode === 'PAGE_NO') return a.minPage - b.minPage || a.earliestDep - b.earliestDep;
+                return 0;
+            });
+
+            // 時間軸設定：00:00 ~ 25:00 (共25小時刻度)
+            const totalHours = 25;
+            const timelineWidth = totalHours * hourWidthPx;
+            const leftColWidth = 116; // 固定左側車次欄寬度 (px)
+
+            // 計算基準時間紅線位置 (含第25小時跨夜區段鏡像紅線)
+            const nowLeftPx = (activeMins / 60) * hourWidthPx;
+            const overnightNowLeftPx = activeMins < 60 ? ((activeMins + 1440) / 60) * hourWidthPx : null;
+
+            // 1. 建構頂部時間刻度列 (Sticky Header，支援點擊直接移動時間軸紅線)
+            let headerHoursHtml = '';
+            for (let h = 0; h < totalHours; h++) {
+                const displayHour = h < 24 ? String(h).padStart(2, '0') + ':00' : '翌日0' + (h - 24) + ':00';
+                headerHoursHtml += `
+                    <div style="width: ${hourWidthPx}px" class="shrink-0 border-l border-slate-700/70 px-1.5 py-2 text-[11px] font-mono text-slate-300 flex items-center justify-between hover:bg-slate-800/80 transition">
+                        <span>${displayHour}</span>
+                        ${hourWidthPx >= 80 ? '<span class="text-[9px] text-slate-500">:30</span>' : ''}
+                    </div>`;
+            }
+
+            let html = `
+                <!-- 頂部時間橫軸標頭 -->
+                <div class="sticky top-0 z-30 flex bg-slate-900/95 backdrop-blur border-b border-slate-700">
+                    <div style="width: ${leftColWidth}px" class="sticky left-0 z-40 bg-slate-900 px-3 py-2 text-xs font-bold text-sky-400 border-r border-slate-700 flex items-center justify-between shrink-0 sticky-col-shadow">
+                        <span>縱軸：車次</span>
+                        <i class="fa-solid fa-train text-[10px]"></i>
+                    </div>
+                    <div onclick="setTimelineByClick(event, ${timelineWidth})" title="點擊任意時間位置即可移動時間軸紅線" class="flex relative cursor-pointer" style="width: ${timelineWidth}px">
+                        ${headerHoursHtml}
+                        <!-- 頂部時間軸紅線時間標籤 -->
+                        <div style="left: ${nowLeftPx}px" class="absolute top-0 bottom-0 z-30 pointer-events-none flex flex-col items-center">
+                            <span class=" -translate-x-1/2 bg-rose-600 text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-b shadow-md border border-rose-300 whitespace-nowrap">
+                                🔴 ${activeTimeStr}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 車次資料列 -->
+                <div class="divide-y divide-slate-800/80 relative">
+            `;
+
+            // 處理同列中若有多個重疊時間區間，自動分上下軌道避免遮擋
+            rows.forEach((row) => {
+                const sortedItems = [...row.items].sort((a, b) => a.depMin - b.depMin || a.page - b.page);
+                const lanes = [];
+
+                const mergedSegments = [];
+                sortedItems.forEach(item => {
+                    const existing = mergedSegments.find(m =>
+                        m.trainNo === item.trainNo &&
+                        m.depTime === item.depTime &&
+                        m.arrTime === item.arrTime &&
+                        m.fromStation === item.fromStation &&
+                        m.toStation === item.toStation
+                    );
+                    if (existing) {
+                        if (!existing.pages.includes(item.page)) existing.pages.push(item.page);
+                        existing.rawItems.push(item);
+                    } else {
+                        mergedSegments.push({
+                            ...item,
+                            pages: [item.page],
+                            rawItems: [item]
+                        });
+                    }
+                });
+
+                mergedSegments.forEach(seg => {
+                    let placed = false;
+                    for (let l = 0; l < lanes.length; l++) {
+                        if (seg.depMin >= lanes[l].lastEndMin - 0.5) {
+                            lanes[l].segments.push(seg);
+                            lanes[l].lastEndMin = seg.arrMin;
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed) {
+                        lanes.push({
+                            lastEndMin: seg.arrMin,
+                            segments: [seg]
+                        });
+                    }
+                });
+
+                const laneHeight = 46;
+                const rowHeight = Math.max(52, lanes.length * laneHeight + 8);
+                const isHandoverRow = mergedSegments.length > 1;
+
+                // 檢查這一列是否有任何一段車次壓到時間軸
+                let rowTouchesTimeline = false;
+
+                // 繪製該列的橫條
+                let barsHtml = '';
+                lanes.forEach((lane, laneIdx) => {
+                    const topPx = 4 + laneIdx * laneHeight;
+                    lane.segments.forEach((seg, segIdx) => {
+                        const leftPx = (seg.depMin / 60) * hourWidthPx;
+                        const rawWidthPx = (seg.durationMin / 60) * hourWidthPx;
+                        const widthPx = Math.max(rawWidthPx, 58);
+                        const colorClass = getBarColorClass(seg);
+                        const pagesText = seg.pages.map(p => `P.${p}`).join(', ');
+
+                        // 判斷此車次橫條是否壓到時間軸
+                        const isTouching = isRunTouchingTimeline(seg, activeMins);
+                        if (isTouching) rowTouchesTimeline = true;
+
+                        const activeBorderClass = isTouching ? 'active-timeline-bar' : '';
+                        const activeBadgeHtml = isTouching
+                            ? `<span class="absolute -top-2 -left-1.5 z-30 px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-bold shadow border border-white flex items-center gap-0.5">🔴壓線</span>`
+                            : '';
+
+                        // 檢查是否與同軌道的下一段形成「樹林站交接」
+                        let handoverBadge = '';
+                        if (segIdx < lane.segments.length - 1) {
+                            const nextSeg = lane.segments[segIdx + 1];
+                            if (seg.toStation === nextSeg.fromStation && Math.abs(nextSeg.depMin - seg.arrMin) <= 30) {
+                                handoverBadge = `<div class="absolute -right-2.5 top-1/2 -translate-y-1/2 z-20 w-4 h-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[9px] font-bold shadow ring-2 ring-slate-900" title="${seg.toStation}站交接班">⇄</div>`;
+                            }
+                        }
+
+                        barsHtml += `
+                            <div onclick="openTrainModal(${seg.id})"
+                                style="left: ${leftPx}px; width: ${widthPx}px; top: ${topPx}px; height: ${laneHeight - 6}px;"
+                                class="absolute rounded-lg border px-2 py-0.5 cursor-pointer transition-transform hover:scale-[1.02] hover:z-20 active:scale-95 shadow-md flex flex-col justify-center overflow-visible ${colorClass} ${activeBorderClass}">
+                                ${activeBadgeHtml}
+                                <div class="flex items-center justify-between gap-1 leading-tight whitespace-nowrap overflow-hidden">
+                                    <span class="font-bold text-[11px] sm:text-xs drop-shadow-sm">${seg.fromStation}→${seg.toStation}</span>
+                                    <span class="text-[10px] font-mono bg-black/30 px-1 rounded text-white/95">${pagesText}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-1 text-[10px] font-mono text-white/90 leading-tight whitespace-nowrap overflow-hidden">
+                                    <span>${seg.depTime}-${seg.arrTime}</span>
+                                    ${seg.note ? `<span class="text-[9px] bg-white/20 px-1 rounded truncate max-w-[70px]">${seg.note}</span>` : ''}
+                                </div>
+                                ${handoverBadge}
+                            </div>
+                        `;
+                    });
+                });
+
+                html += `
+                    <div class="flex hover:bg-slate-800/40 transition-colors group ${rowTouchesTimeline ? 'bg-rose-950/15' : ''}">
+                        <!-- 固定左側縱軸：車次欄位 (若壓到時間軸也會同步加上紅框標示) -->
+                        <div onclick="openTrainModal(${row.items[0].id})"
+                            style="width: ${leftColWidth}px; min-height: ${rowHeight}px"
+                            class="sticky left-0 z-20 ${rowTouchesTimeline ? 'bg-rose-950/90 active-timeline-row-cell' : 'bg-slate-900'} group-hover:bg-slate-800 px-2.5 py-1.5 border-r border-slate-700/80 shrink-0 flex flex-col justify-center cursor-pointer sticky-col-shadow">
+                            <div class="flex items-center justify-between gap-1">
+                                <span class="font-mono font-bold text-xs sm:text-sm flex items-center gap-1 ${rowTouchesTimeline ? 'text-rose-300' : (isHandoverRow ? 'text-emerald-400' : 'text-white')}">
+                                    ${rowTouchesTimeline ? '<span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-pulse"></span>' : ''}
+                                    <span>${row.rowTitle}</span>
+                                </span>
+                                ${isHandoverRow ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">${mergedSegments.length}段</span>` : `<span class="text-[10px] font-mono text-slate-400">P.${row.items[0].page}</span>`}
+                            </div>
+                            <div class="text-[10px] ${rowTouchesTimeline ? 'text-rose-200/90 font-medium' : 'text-slate-400'} truncate mt-0.5">
+                                ${mergedSegments[0].fromStation}→${mergedSegments[mergedSegments.length - 1].toStation}
+                            </div>
+                        </div>
+
+                        <!-- 右側時間軸軌道區 -->
+                        <div class="relative timeline-grid-bg" style="width: ${timelineWidth}px; height: ${rowHeight}px; background-size: ${hourWidthPx}px 100%;">
+                            <!-- 基準時間軸紅線 -->
+                            <div style="left: ${nowLeftPx}px" class="absolute top-0 bottom-0 w-[2px] bg-rose-500 shadow-[0_0_8px_#ef4444] pointer-events-none z-20"></div>
+                            ${overnightNowLeftPx !== null ? `<div style="left: ${overnightNowLeftPx}px" class="absolute top-0 bottom-0 w-[2px] bg-rose-500/70 border-r border-dashed border-rose-300 pointer-events-none z-20"></div>` : ''}
+                            ${barsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            canvas.innerHTML = html;
+        }
+
+        // 縮放時間軸寬度
+        function changeZoom(delta) {
+            hourWidthPx = Math.min(140, Math.max(40, hourWidthPx + delta));
+            const label = document.getElementById('zoom-label');
+            if (hourWidthPx <= 45) label.textContent = '緊湊';
+            else if (hourWidthPx <= 75) label.textContent = '標準';
+            else if (hourWidthPx <= 105) label.textContent = '寬敞';
+            else label.textContent = '特大';
+            renderGanttView();
+        }
+
+        // 捲動至現在時間或清晨起點
+        // 捲動至現在時間或基準時間軸位置
+        function scrollToCurrentTime() {
+            const container = document.getElementById('gantt-scroll-container');
+            const mins = getActiveTimelineMinutes();
+            const targetPx = Math.max(0, (mins / 60) * hourWidthPx - 140);
+            container.scrollTo({ left: targetPx, behavior: 'smooth' });
+        }
+
+        // ============================================================================
+        // 5. 視角 2：依班表頁數檢視 (第 1 ~ 53 頁卡片與外站折返計算)
+        // ============================================================================
+        let selectedSinglePage = null;
+
+        function renderPagePills(activePagesSet) {
+            const container = document.getElementById('page-pills-container');
+            let html = '';
+            for (let p = 1; p <= 53; p++) {
+                const isMatched = activePagesSet.has(p);
+                const isSelected = selectedSinglePage === p;
+                const isPinned = pinnedPage === p;
+
+                let btnClass = 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700';
+                if (isSelected) {
+                    btnClass = 'bg-sky-600 text-white border-sky-400 shadow-lg shadow-sky-600/30 font-bold';
+                } else if (!isMatched) {
+                    btnClass = 'bg-slate-900/40 text-slate-600 border-slate-800/50 opacity-50';
+                }
+
+                html += `
+                    <button onclick="selectSinglePage(${p})" class="shrink-0 px-3 py-1.5 rounded-xl border text-xs font-mono transition flex items-center gap-1 ${btnClass}">
+                        ${isPinned ? '<i class="fa-solid fa-thumbtack text-amber-400 text-[10px]"></i>' : ''}
+                        <span>P.${p}</span>
+                    </button>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function selectSinglePage(pageNo) {
+            selectedSinglePage = pageNo;
+            renderPagesView();
+        }
+
+        function showAllPagesGrid() {
+            selectedSinglePage = null;
+            renderPagesView();
+        }
+
+        function renderPagesView() {
+            const filteredRuns = getFilteredRuns();
+            const activePagesSet = new Set(filteredRuns.map(r => r.page));
+            renderPagePills(activePagesSet);
+
+            const container = document.getElementById('pages-cards-container');
+            let pagesToShow = Array.from(activePagesSet).sort((a, b) => a - b);
+
+            if (selectedSinglePage !== null) {
+                pagesToShow = [selectedSinglePage];
+            }
+
+            document.getElementById('stats-counter').textContent = `目前顯示 ${pagesToShow.length} 頁班表完整行程`;
+
+            if (pagesToShow.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full p-12 text-center text-slate-400 bg-slate-900 rounded-2xl border border-slate-800">
+                        <p class="text-base font-medium text-slate-300">沒有符合條件的班表頁</p>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            pagesToShow.forEach(pageNo => {
+                // 取得該頁的所有車次 (完整呈現該頁流程)
+                const pageRuns = allRuns.filter(r => r.page === pageNo);
+                const firstRun = pageRuns[0];
+                const lastRun = pageRuns[pageRuns.length - 1];
+                const isPinned = pinnedPage === pageNo;
+
+                // 計算總駕駛/乘務時數
+                const totalWorkMins = pageRuns.reduce((acc, r) => acc + r.durationMin, 0);
+
+                // 組裝車次流程列表與折返待命時間
+                let stepsHtml = '';
+                pageRuns.forEach((run, idx) => {
+                    // 檢查與上一班車之間的間隔（待命/折返或外宿休息）
+                    if (idx > 0) {
+                        const prev = pageRuns[idx - 1];
+                        let gapMins = run.depMin - (prev.arrMin % 1440);
+                        const isNextDay = run.dayInShift > prev.dayInShift;
+                        if (gapMins < 0) gapMins += 1440;
+
+                        stepsHtml += `
+                            <div class="ml-6 my-1.5 pl-4 border-l-2 border-dashed ${isNextDay ? 'border-indigo-500/60' : 'border-slate-700'} py-1 flex items-center gap-2 text-xs">
+                                ${isNextDay
+                                    ? `<span class="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium flex items-center gap-1"><i class="fa-solid fa-bed"></i> 跨日/外站休息 (${prev.toStation}${prev.toStation !== run.fromStation ? '→' + run.fromStation : ''}) • 間隔 ${formatDuration(gapMins)}</span>`
+                                    : `<span class="text-slate-400 flex items-center gap-1"><i class="fa-solid fa-hourglass-half text-slate-500"></i> ${prev.toStation === run.fromStation ? `${run.fromStation}站待命折返` : `${prev.toStation}→${run.fromStation} 轉乘`}：${formatDuration(gapMins)}</span>`
+                                }
+                            </div>
+                        `;
+                    }
+
+                    const badgeColor = run.isParcel ? 'bg-purple-600 text-white' : (run.isDeadhead ? 'bg-amber-500 text-slate-950' : (run.isMultiSegment ? 'bg-emerald-600 text-white' : 'bg-sky-600 text-white'));
+
+                    stepsHtml += `
+                        <div onclick="openTrainModal(${run.id})" class="group relative bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 rounded-xl p-3 cursor-pointer transition flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-3">
+                                <div class="flex flex-col items-center">
+                                    <span class="text-[10px] font-mono text-slate-400">D${run.dayInShift}</span>
+                                    <span class="px-2.5 py-1 rounded-lg font-mono font-bold text-xs sm:text-sm ${badgeColor}">${run.trainNo}</span>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2 font-bold text-sm sm:text-base text-white">
+                                        <span>${run.fromStation}</span>
+                                        <span class="text-xs font-mono text-sky-400">${run.depTime}</span>
+                                        <i class="fa-solid fa-arrow-right-long text-slate-500 text-xs"></i>
+                                        <span>${run.toStation}</span>
+                                        <span class="text-xs font-mono text-emerald-400">${run.arrTime}</span>
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400">
+                                        <span>行車 ${formatDuration(run.durationMin)}</span>
+                                        ${run.isMultiSegment ? `<span class="text-emerald-400 font-medium"><i class="fa-solid fa-people-arrows mr-0.5"></i>有交接/多段</span>` : ''}
+                                        ${run.note ? `<span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">${run.note}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-white text-xs"></i>
+                        </div>
+                    `;
+                });
+
+                html += `
+                    <div class="bg-slate-900 border ${isPinned ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-slate-800'} rounded-2xl p-4 flex flex-col justify-between shadow-lg">
+                        <div>
+                            <!-- 卡片頂部資訊 -->
+                            <div class="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400 font-mono font-bold text-sm flex items-center justify-center">
+                                        P.${pageNo}
+                                    </span>
+                                    <div>
+                                        <h3 class="font-bold text-base text-white flex items-center gap-2">
+                                            <span>第 ${pageNo} 頁班表</span>
+                                            ${isPinned ? '<span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">已釘選</span>' : ''}
+                                        </h3>
+                                        <p class="text-xs text-slate-400 font-mono">
+                                            ${firstRun.depTime} ${firstRun.fromStation}開 ➔ ${lastRun.arrTime} 返抵${lastRun.toStation} (共${pageRuns.length}趟)
+                                        </p>
+                                    </div>
+                                </div>
+                                <button onclick="togglePinPage(${pageNo})" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs flex items-center gap-1 ${isPinned ? 'text-amber-400' : 'text-slate-400'}" title="釘選為常用班表">
+                                    <i class="fa-solid fa-thumbtack"></i>
+                                    <span class="hidden sm:inline">${isPinned ? '取消釘選' : '釘選本頁'}</span>
+                                </button>
+                            </div>
+
+                            <!-- 流程清單 -->
+                            <div class="space-y-1.5">
+                                ${stepsHtml}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                            <span>乘務總行車時間：約 ${formatDuration(totalWorkMins)}</span>
+                            <button onclick="filterGanttByPage(${pageNo})" class="text-sky-400 hover:text-sky-300 font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-chart-gantt"></i> 在時間軸查看本頁
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function filterGanttByPage(pageNo) {
+            document.getElementById('page-filter').value = String(pageNo);
+            switchView('gantt');
+        }
+
+        // ============================================================================
+        // 6. 視角 3：樹林交接班 & 跨頁重複車次檢視
+        // ============================================================================
+        function renderHandoverView() {
+            const container = document.getElementById('handover-cards-container');
+            const multiGroups = Object.entries(baseTrainMap)
+                .filter(([baseNo, list]) => list.length > 1)
+                .sort((a, b) => a[1][0].numericNo - b[1][0].numericNo);
+
+            document.getElementById('stats-counter').textContent = `共有 ${multiGroups.length} 組車次具有樹林交接班或跨頁多段排班`;
+
+            let html = '';
+            multiGroups.forEach(([baseNo, list]) => {
+                // 依開車時間排序，清楚呈現上一棒與下一棒
+                const sorted = [...list].sort((a, b) => a.depMin - b.depMin || a.page - b.page);
+
+                // 判斷是否包含「樹林站交接」(一段抵達樹林、另一段從樹林出發)
+                const hasShulinArr = sorted.some(r => r.toStation === '樹林');
+                const hasShulinDep = sorted.some(r => r.fromStation === '樹林');
+                const isShulinHandover = hasShulinArr && hasShulinDep;
+
+                let segmentsHtml = '';
+                sorted.forEach((r, idx) => {
+                    segmentsHtml += `
+                        <div onclick="openTrainModal(${r.id})" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 flex items-center justify-between gap-2 cursor-pointer transition">
+                            <div class="flex items-center gap-2.5">
+                                <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-mono font-bold text-xs">第 ${r.page} 頁</span>
+                                <span class="font-mono font-bold text-xs text-amber-300">${r.trainNo}</span>
+                                <span class="text-xs sm:text-sm font-medium text-white">${r.fromStation} <span class="font-mono text-sky-400">${r.depTime}</span> → ${r.toStation} <span class="font-mono text-emerald-400">${r.arrTime}</span></span>
+                            </div>
+                            ${r.note ? `<span class="text-[11px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 shrink-0">${r.note}</span>` : '<i class="fa-solid fa-angle-right text-slate-500 text-xs"></i>'}
+                        </div>
+                    `;
+                });
+
+                html += `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                            <div class="flex items-center gap-2">
+                                <span class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-mono font-bold text-sm">${baseNo} 車次</span>
+                                ${isShulinHandover
+                                    ? `<span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-medium"><i class="fa-solid fa-repeat mr-1"></i>樹林交接續駛</span>`
+                                    : `<span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">多頁共用/區間</span>`
+                                }
+                            </div>
+                            <span class="text-xs font-mono text-slate-400">共 ${sorted.length} 筆班表紀錄</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${segmentsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // ============================================================================
+        // 7. 互動視窗 (Modal) 與釘選書籤功能
+        // ============================================================================
+        function openTrainModal(runId) {
+            const run = allRuns.find(r => r.id === runId);
+            if (!run) return;
+
+            document.getElementById('modal-train-badge').textContent = run.trainNo;
+            document.getElementById('modal-title').textContent = `${run.fromStation} ➔ ${run.toStation}`;
+            document.getElementById('modal-subtitle').textContent = `所屬班表：第 ${run.page} 頁（第 ${run.seqInPage} 趟勤務 • 第 ${run.dayInShift} 天）`;
+
+            // 找出同一個基礎車次的所有其他班段 (顯示交接班資訊)
+            const sameTrainRuns = baseTrainMap[run.baseNo] || [];
+            let relatedHtml = '';
+            if (sameTrainRuns.length > 1) {
+                relatedHtml = `
+                    <div class="bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-3.5 space-y-2">
+                        <div class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-people-arrows"></i>
+                            <span>同車次 (${run.baseNo}) 交接班 / 其他班表頁紀錄：</span>
+                        </div>
+                        <div class="space-y-1.5">
+                            ${sameTrainRuns.map(other => `
+                                <div onclick="openTrainModal(${other.id})" class="p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer ${other.id === run.id ? 'bg-emerald-500/25 border border-emerald-400/50 text-white font-bold' : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'}">
+                                    <span>第 ${other.page} 頁：${other.trainNo}（${other.fromStation} ${other.depTime} → ${other.toStation} ${other.arrTime}）</span>
+                                    <span class="text-[11px] text-emerald-300">${other.id === run.id ? '目前檢視' : other.note || '點擊切換'}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 找出該頁班表的完整前後順序
+            const pageRuns = allRuns.filter(r => r.page === run.page);
+            const pageSeqHtml = pageRuns.map(pr => `
+                <div onclick="openTrainModal(${pr.id})" class="p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer ${pr.id === run.id ? 'bg-sky-500/25 border border-sky-500/50 text-white font-bold' : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300'}">
+                    <div class="flex items-center gap-2">
+                        <span class="font-mono text-[11px] text-slate-400">D${pr.dayInShift}</span>
+                        <span class="font-mono font-bold text-sky-300 w-14">${pr.trainNo}</span>
+                        <span>${pr.fromStation} ${pr.depTime} → ${pr.toStation} ${pr.arrTime}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">${pr.note}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('modal-body').innerHTML = `
+                <!-- 核心開車與抵達時間大字卡 -->
+                <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 flex items-center justify-between text-center">
+                    <div class="flex-1">
+                        <div class="text-xs text-slate-400">出發開車</div>
+                        <div class="text-lg sm:text-xl font-bold text-white mt-0.5">${run.fromStation}</div>
+                        <div class="text-base sm:text-lg font-mono font-bold text-sky-400">${run.depTime}</div>
+                    </div>
+                    <div class="flex flex-col items-center px-3">
+                        <span class="text-[11px] font-mono text-slate-400 mb-1">${formatDuration(run.durationMin)}</span>
+                        <div class="w-16 sm:w-24 h-0.5 bg-gradient-to-r from-sky-500 to-emerald-500 relative">
+                            <i class="fa-solid fa-train absolute -top-2 left-1/2 -translate-x-1/2 text-xs text-white"></i>
+                        </div>
+                        <span class="text-[11px] text-slate-400 mt-1">${run.isDeadhead ? '便乘移動' : (run.isParcel ? '行包專列' : '值乘勤務')}</span>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-xs text-slate-400">終點抵達</div>
+                        <div class="text-lg sm:text-xl font-bold text-white mt-0.5">${run.toStation}</div>
+                        <div class="text-base sm:text-lg font-mono font-bold text-emerald-400">${run.arrTime}</div>
+                    </div>
+                </div>
+
+                ${run.note ? `
+                    <div class="px-3.5 py-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span>特殊行駛日/備註：<strong>${run.note}</strong></span>
+                    </div>
+                ` : ''}
+
+                ${relatedHtml}
+
+                <!-- 同頁完整班表預覽 -->
+                <div class="space-y-2">
+                    <div class="text-xs font-bold text-slate-300 flex items-center justify-between">
+                        <span>📋 第 ${run.page} 頁班表完整順序（共 ${pageRuns.length} 趟）：</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        ${pageSeqHtml}
+                    </div>
+                </div>
+            `;
+
+            // 綁定底部按鈕動作
+            const pinBtn = document.getElementById('modal-pin-btn');
+            const isPinned = pinnedPage === run.page;
+            pinBtn.innerHTML = `<i class="fa-solid fa-thumbtack ${isPinned ? 'text-amber-400' : 'text-slate-400'}"></i><span>${isPinned ? `取消釘選第 ${run.page} 頁` : `釘選第 ${run.page} 頁班表`}</span>`;
+            pinBtn.onclick = () => {
+                togglePinPage(run.page);
+                openTrainModal(run.id);
+            };
+
+            const jumpBtn = document.getElementById('modal-jump-page-btn');
+            jumpBtn.onclick = () => {
+                closeTrainModal();
+                selectedSinglePage = run.page;
+                switchView('pages');
+            };
+
+            document.getElementById('train-modal').classList.remove('hidden');
+        }
+
+        function closeTrainModal() {
+            document.getElementById('train-modal').classList.add('hidden');
+        }
+
+        // 點擊背景關閉 Modal
+        document.getElementById('train-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'train-modal') closeTrainModal();
+        });
+
+        // 釘選班表頁功能
+        function togglePinPage(pageNo) {
+            if (pinnedPage === pageNo) {
+                pinnedPage = null;
+                localStorage.removeItem('conductor_pinned_page');
+            } else {
+                pinnedPage = pageNo;
+                localStorage.setItem('conductor_pinned_page', String(pageNo));
+            }
+            updatePinnedBadge();
+            renderActiveView();
+        }
+
+        function updatePinnedBadge() {
+            const container = document.getElementById('pinned-badge-container');
+            const text = document.getElementById('pinned-badge-text');
+            if (pinnedPage) {
+                container.classList.remove('hidden');
+                text.textContent = `釘選：第 ${pinnedPage} 頁`;
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function jumpToPinnedPage() {
+            if (!pinnedPage) return;
+            selectedSinglePage = pinnedPage;
+            switchView('pages');
+        }
+
+        // ============================================================================
+        // 8. 視角切換、深淺主題與即時時鐘
+        // ============================================================================
+        function switchView(viewName) {
+            currentView = viewName;
+            document.getElementById('view-gantt').classList.toggle('hidden', viewName !== 'gantt');
+            document.getElementById('view-pages').classList.toggle('hidden', viewName !== 'pages');
+            document.getElementById('view-handover').classList.toggle('hidden', viewName !== 'handover');
+
+            const tabs = ['gantt', 'pages', 'handover'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === viewName) {
+                    btn.className = 'px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 bg-sky-600 text-white shadow';
+                } else {
+                    btn.className = 'px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 text-slate-300 hover:text-white';
+                }
+            });
+
+            renderActiveView();
+        }
+
+        function renderActiveView() {
+            if (currentView === 'gantt') renderGanttView();
+            else if (currentView === 'pages') renderPagesView();
+            else if (currentView === 'handover') renderHandoverView();
+        }
+
+        function toggleTheme() {
+            const htmlEl = document.documentElement;
+            const isDark = htmlEl.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            if (isDark) {
+                icon.className = 'fa-solid fa-sun';
+                document.body.className = 'bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200';
+            } else {
+                icon.className = 'fa-solid fa-moon text-slate-700';
+                document.body.className = 'bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200';
+            }
+        }
+
+        function updateLiveClock() {
+            const now = new Date();
+            const days = ['日', '一', '二', '三', '四', '五', '六'];
+            const timeStr = now.toTimeString().split(' ')[0];
+            document.getElementById('live-clock').textContent = `週${days[now.getDay()]} ${timeStr}`;
+
+            // 每逢分鐘變更且處於即時模式時，自動更新甘特圖上的壓線紅框狀態
+            if (!isCustomTimeline && now.getSeconds() === 0 && currentView === 'gantt') {
+                renderGanttView();
+            }
+        }
+
+        // 啟動初始化
+        window.onload = function () {
+            initDataset();
+            populateSelectOptions();
+            updatePinnedBadge();
+            updateLiveClock();
+            setInterval(updateLiveClock, 1000);
+            renderActiveView();
+
+            // 預設將甘特圖捲動到清晨 05:00 附近，方便一眼看到早班至晚班車次
+            setTimeout(() => {
+                const container = document.getElementById('gantt-scroll-container');
+                if (container) container.scrollLeft = 4.8 * hourWidthPx;
+            }, 100);
+        };
+    </script>
+</body>
+</html>
