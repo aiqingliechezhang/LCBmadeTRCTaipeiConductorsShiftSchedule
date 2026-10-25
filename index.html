@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>列車長工作班表智慧統整系統 (第1~53頁)</title>
+    <title>班表統整系統（Beta） (第1~53頁)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -98,12 +98,12 @@
                 </div>
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <h1 class="font-bold text-base sm:text-lg tracking-tight text-white">列車長班表統整系統</h1>
+                        <h1 class="font-bold text-base sm:text-lg tracking-tight text-white">班表統整系統（Beta）</h1>
                         <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">全53頁</span>
                     </div>
-                    <!-- 新增：台北車班林崇本車長製作與免責聲明 -->
+                    <!-- 免責聲明 -->
                     <p class="text-[11px] sm:text-xs text-amber-300/95 font-medium mt-0.5 leading-snug">
-                        <i class="fa-solid fa-user-tie mr-1 text-amber-400"></i>台北車班林崇本車長製作，僅供參考、不保證資料正確、也不保證更新
+                        <i class="fa-solid fa-user-tie mr-1 text-amber-400"></i>林O本製作。僅供參考用，不保證資料正確、也不保證更新
                     </p>
                     <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400 font-mono mt-0.5">
                         <span id="live-clock">--:--:--</span>
@@ -130,9 +130,8 @@
                         <span>班表頁(1-53)</span>
                     </button>
                     <button id="tab-handover" onclick="switchView('handover')" class="px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 text-slate-300 hover:text-white">
-                        <i class="fa-solid fa-people-arrows"></i>
-                        <span class="hidden sm:inline">交接/重複車次</span>
-                        <span class="sm:hidden">交接</span>
+                        <i class="fa-solid fa-clone"></i>
+                        <span>重複車次</span>
                     </button>
                 </div>
 
@@ -146,33 +145,61 @@
     <!-- 智慧搜尋與篩選控制列 -->
     <section class="bg-slate-900/60 border-b border-slate-800/80 px-3 py-3 sm:px-6">
         <div class="max-w-7xl mx-auto space-y-2.5">
-            <!-- 第一排：關鍵字搜尋、車站快速篩選、頁碼篩選 -->
+            <!-- 第一排：關鍵字搜尋、出發站、抵達站、班表頁 -->
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
                 <!-- 搜尋框 -->
-                <div class="sm:col-span-5 relative">
+                <div class="sm:col-span-4 relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                    <input type="text" id="search-input" oninput="handleFilterChange()" placeholder="搜尋車次(如 1161、432)、車站(如 台東、花蓮)或頁碼..." 
+                    <input type="text" id="search-input" oninput="handleFilterChange()" placeholder="搜尋車次(如 1161、432)、車站或頁碼..." 
                         class="w-full pl-9 pr-8 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
                     <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1">
                         <i class="fa-solid fa-circle-xmark"></i>
                     </button>
                 </div>
 
-                <!-- 車站下拉選單 -->
-                <div class="grid grid-cols-2 sm:col-span-4 gap-2">
-                    <select id="station-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
-                        <option value="ALL">📍 所有起訖車站</option>
+                <!-- 起、訖車站分開成 2 個選單 + 班表頁選單 -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 sm:col-span-8 gap-2">
+                    <select id="from-station-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="ALL">🛫 所有起站 (出發)</option>
+                    </select>
+
+                    <select id="to-station-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="ALL">🛬 所有訖站 (抵達)</option>
                     </select>
 
                     <!-- 班表頁下拉選單 -->
-                    <select id="page-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                    <select id="page-filter" onchange="handleFilterChange()" class="col-span-2 sm:col-span-1 bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
                         <option value="ALL">📄 全部班表頁 (1~53)</option>
                     </select>
                 </div>
+            </div>
 
-                <!-- 性質與星期篩選 -->
-                <div class="grid grid-cols-2 sm:col-span-3 gap-2">
-                    <select id="day-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+            <!-- 第二排：車種選單（對號/區間/觀光）、勤務性質選單、星期選單（含底部校閱提示文字） -->
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start">
+                <!-- 新增：車種類別篩選 (對號車3碼 / 區間快4碼 / 觀光專列) -->
+                <div class="sm:col-span-4">
+                    <select id="category-filter" onchange="handleFilterChange()" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="ALL">🚄 全部車種 (對號 / 區間 / 觀光專列)</option>
+                        <option value="RESERVED">對號車（車次數字 3 碼）</option>
+                        <option value="LOCAL">區間(快)（車次數字 4 碼）</option>
+                        <option value="TOURIST">觀光/專列（6652、6655、6616、6615、1）</option>
+                    </select>
+                </div>
+
+                <!-- 勤務性質篩選 -->
+                <div class="sm:col-span-3">
+                    <select id="type-filter" onchange="handleFilterChange()" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="ALL">🚆 全部勤務性質</option>
+                        <option value="DUTY">一般值乘 (不含便乘)</option>
+                        <option value="DEADHEAD">便乘車次 (含「便」)</option>
+                        <option value="PARCEL">回送 / 行包</option>
+                        <option value="OVERLAP">🔁 重複車次</option>
+                    </select>
+                </div>
+
+                <!-- 星期篩選 + 建議標注文字 -->
+                <div class="sm:col-span-5 flex flex-col">
+                    <select id="day-filter" onchange="handleFilterChange()" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
                         <option value="ALL">📅 不限星期 (全部顯示)</option>
                         <option value="1">週一 行駛班次</option>
                         <option value="2">週二～週四 行駛班次</option>
@@ -180,26 +207,21 @@
                         <option value="6">週六 行駛班次</option>
                         <option value="7">週日 行駛班次</option>
                     </select>
-
-                    <select id="type-filter" onchange="handleFilterChange()" class="bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
-                        <option value="ALL">🚆 全部勤務性質</option>
-                        <option value="DUTY">一般值乘 (不含便乘)</option>
-                        <option value="DEADHEAD">便乘車次 (含「便」)</option>
-                        <option value="PARCEL">行包專列 (554/653)</option>
-                        <option value="OVERLAP">🔁 樹林交接/多段車次</option>
-                    </select>
+                    <p class="text-[11px] text-amber-300/90 mt-1 px-1 leading-snug">
+                        <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-400"></i>建議選擇不限星期（全部顯示），以免漏看車次；有關星期幾行駛什麼車次，目前還在校閱中。
+                    </p>
                 </div>
             </div>
 
-            <!-- 第二排：統計資訊與圖例說明 -->
+            <!-- 第三排：統計資訊與圖例說明 -->
             <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-400">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span class="font-medium text-slate-300" id="stats-counter">載入中...</span>
                     <span class="inline-flex items-center gap-1 font-medium text-rose-400"><span class="w-2.5 h-2.5 rounded-sm bg-sky-500 border-2 border-red-500 inline-block shadow-[0_0_6px_#ef4444]"></span>壓到時間軸(紅框)</span>
                     <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-sky-500 inline-block"></span>一般值乘</span>
                     <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block"></span>便乘(便)</span>
-                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>樹林交接/重複車次</span>
-                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block"></span>行包/回送</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>重複車次</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block"></span>回送</span>
                 </div>
                 <button onclick="resetAllFilters()" id="reset-filter-btn" class="hidden text-sky-400 hover:text-sky-300 font-medium flex items-center gap-1">
                     <i class="fa-solid fa-rotate-left"></i> 重設所有篩選
@@ -273,14 +295,14 @@
 
             <!-- 手機版滑動提示 -->
             <div class="flex flex-wrap items-center justify-between text-[11px] text-slate-400 px-1 gap-1">
-                <span><i class="fa-solid fa-hand-pointer mr-1 text-sky-400"></i>左右滑動時間軸，點擊上方時間刻度可移動紅線、點擊車次查看交接</span>
+                <span><i class="fa-solid fa-hand-pointer mr-1 text-sky-400"></i>左右滑動時間軸，點擊上方時間刻度可移動紅線、點擊車次查看完整資訊</span>
                 <span class="text-rose-400 font-medium">🔴 紅框代表該車次正壓在時間軸線上</span>
             </div>
 
             <!-- 甘特圖本體容器 -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex-1 flex flex-col">
                 <div id="gantt-scroll-container" class="overflow-x-auto overflow-y-auto max-h-[72vh] relative select-none">
-                    <!-- 由 JavaScript 動態繪製固定左欄與 00:00~26:00 時間軸 -->
+                    <!-- 由 JavaScript 動態繪製固定左欄與 00:00~25:00 時間軸 -->
                     <div id="gantt-canvas" class="min-w-max relative"></div>
                 </div>
             </div>
@@ -317,30 +339,30 @@
             </div>
         </div>
 
-        <!-- ==================== 視角 3：樹林交接班 & 重複車次專區 ==================== -->
+        <!-- ==================== 視角 3：重複車次專區 ==================== -->
         <div id="view-handover" class="hidden flex-1 flex flex-col space-y-4">
             <div class="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl p-4">
                 <div class="flex items-start gap-3">
                     <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                        <i class="fa-solid fa-people-arrows text-lg"></i>
+                        <i class="fa-solid fa-clone text-lg"></i>
                     </div>
                     <div>
-                        <h2 class="font-bold text-base text-white">樹林站交接班 / 跨頁重複車次統整</h2>
+                        <h2 class="font-bold text-base text-white">重複車次統整</h2>
                         <p class="text-xs sm:text-sm text-slate-300 mt-1">
-                            系統自動比對全 53 頁班表，將**相同車次（含樹林交接續駛、不同星期區間、或同車次多段值乘）**自動串聯在一起，方便您一眼查閱上一棒是哪一頁班表、下一棒交給哪一頁班表！
+                            系統自動比對全 53 頁班表，將<strong>重複出現的相同車次（含跨頁多段值乘、不同星期行駛區間、或同車次多趟次）</strong>統一整理於此，方便您快速查閱各頁班表之間的關聯。
                         </p>
                     </div>
                 </div>
             </div>
 
             <div id="handover-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- JS 動態生成交接車次卡片 -->
+                <!-- JS 動態生成重複車次卡片 -->
             </div>
         </div>
 
     </main>
 
-    <!-- 車次詳細資訊與交接班互動視窗 (Modal) -->
+    <!-- 車次詳細資訊互動視窗 (Modal) -->
     <div id="train-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity">
         <div class="bg-slate-900 border-t sm:border border-slate-700 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[88vh] flex flex-col animate-fade-in">
             <!-- Modal 頂部標題 -->
@@ -379,8 +401,8 @@
     <!-- 頁尾資訊 -->
     <footer class="border-t border-slate-800/80 py-4 px-4 text-center text-xs text-slate-500 mt-6">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-            <span>🚆 列車長工作班表統整查詢系統 • 台北車班林崇本車長製作（僅供參考、不保證資料正確、也不保證更新）</span>
-            <span>支援半點時刻 (.5 = 30秒) 精準定位與樹林站交接班串聯</span>
+            <span>🚆 班表統整系統（Beta） • 林O本製作。僅供參考用，不保證資料正確、也不保證更新</span>
+            <span>支援半點時刻 (.5 = 30秒) 精準定位與重複車次統整</span>
         </div>
     </footer>
 
@@ -748,16 +770,19 @@
             ]
         };
 
+        // 觀光/專列指定車次數字清單
+        const TOURIST_TRAIN_NUMS = new Set(['6652', '6655', '6616', '6615', '1']);
+
         // ============================================================================
         // 2. 資料解析與正規化處理
         // ============================================================================
         let allRuns = [];
-        let baseTrainMap = {}; // 記錄同一個純數字/基礎車次出現的所有班段
+        let baseTrainMap = {}; // 記錄同一個基礎車次出現的所有班段
         let currentView = 'gantt';
         let hourWidthPx = 70; // 甘特圖每小時像素寬度 (支援縮放)
         let pinnedPage = localStorage.getItem('conductor_pinned_page') ? parseInt(localStorage.getItem('conductor_pinned_page')) : null;
 
-        // 時間軸基準分鐘數 (預設跟隨現在系統時間，使用者也可手動點選或輸入任意時刻查看壓線車次)
+        // 時間軸基準分鐘數
         let isCustomTimeline = false;
         let customTimelineMins = 0;
 
@@ -774,13 +799,11 @@
             return `${h}:${m}`;
         }
 
-        // 判斷某筆車次區間是否「壓到時間軸」(涵蓋跨午夜車次，例如 22:57.5~00:16 在 00:10 或 23:30 都會判定為壓線)
+        // 判斷某筆車次區間是否「壓到時間軸」
         function isRunTouchingTimeline(run, activeMins) {
-            // 情況 1: 一般時段或當日比對
             if (activeMins >= run.depMin && activeMins <= run.arrMin) {
                 return true;
             }
-            // 情況 2: 跨午夜班次 (arrMin > 1440)，若目前時間在凌晨 (例如 00:10 -> activeMins=10)，加 1440 後比對 24:10
             if (run.isOvernightRun && (activeMins + 1440) >= run.depMin && (activeMins + 1440) <= run.arrMin) {
                 return true;
             }
@@ -844,10 +867,31 @@
             return trainStr.replace(/便|\(回送\)/g, '').trim();
         }
 
+        // 取出車次前方純數字字串 (例如 "1008A" -> "1008", "6652(回送)" -> "6652", "1B" -> "1")
+        function extractLeadingDigitsStr(trainStr) {
+            const match = trainStr.match(/^\d+/);
+            return match ? match[0] : '';
+        }
+
         // 取出純數字供排序使用
         function extractNumericTrainNo(trainStr) {
             const match = trainStr.match(/\d+/);
             return match ? parseInt(match[0], 10) : 99999;
+        }
+
+        // 判斷車種分類：觀光/專列 (TOURIST)、對號車3碼 (RESERVED)、區間(快)4碼 (LOCAL)
+        function classifyTrainCategory(trainStr) {
+            const digitsStr = extractLeadingDigitsStr(trainStr);
+            if (TOURIST_TRAIN_NUMS.has(digitsStr)) {
+                return 'TOURIST';
+            }
+            if (digitsStr.length === 3) {
+                return 'RESERVED';
+            }
+            if (digitsStr.length === 4) {
+                return 'LOCAL';
+            }
+            return 'OTHER';
         }
 
         // 判斷該車次在指定星期是否行駛 (1:週一, 2:週二~四, 5:週五, 6:週六, 7:週日)
@@ -929,7 +973,9 @@
 
                     const baseNo = extractBaseTrainNo(trainNo);
                     const isDeadhead = trainNo.includes('便');
-                    const isParcel = note.includes('行包') || trainNo.includes('回送');
+                    // 依據需求第6點：6652(回送)不用標出來當紫色，算在重複車次的一部分即可
+                    const isParcel = note.includes('行包');
+                    const trainCategory = classifyTrainCategory(trainNo);
 
                     const runObj = {
                         id: idCounter++,
@@ -939,6 +985,7 @@
                         trainNo,
                         baseNo,
                         numericNo: extractNumericTrainNo(trainNo),
+                        trainCategory,
                         depTime,
                         fromStation,
                         arrTime,
@@ -958,7 +1005,7 @@
                 });
             }
 
-            // 標記哪些車次屬於「重複/樹林交接車次」
+            // 標記哪些車次屬於「重複車次」
             allRuns.forEach(run => {
                 const group = baseTrainMap[run.baseNo];
                 run.isMultiSegment = group.length > 1;
@@ -966,21 +1013,31 @@
         }
 
         // ============================================================================
-        // 3. 篩選器邏輯與下拉選單初始化
+        // 3. 篩選器邏輯與下拉選單初始化 (起、訖站分開為 2 個選單)
         // ============================================================================
         function populateSelectOptions() {
-            const stationSet = new Set();
+            const fromStationSet = new Set();
+            const toStationSet = new Set();
+
             allRuns.forEach(r => {
-                stationSet.add(r.fromStation);
-                stationSet.add(r.toStation);
+                fromStationSet.add(r.fromStation);
+                toStationSet.add(r.toStation);
             });
 
-            const stationSelect = document.getElementById('station-filter');
-            Array.from(stationSet).sort().forEach(st => {
+            const fromSelect = document.getElementById('from-station-filter');
+            Array.from(fromStationSet).sort().forEach(st => {
                 const opt = document.createElement('option');
                 opt.value = st;
-                opt.textContent = `📍 ${st}`;
-                stationSelect.appendChild(opt);
+                opt.textContent = `🛫 起站：${st}`;
+                fromSelect.appendChild(opt);
+            });
+
+            const toSelect = document.getElementById('to-station-filter');
+            Array.from(toStationSet).sort().forEach(st => {
+                const opt = document.createElement('option');
+                opt.value = st;
+                opt.textContent = `🛬 訖站：${st}`;
+                toSelect.appendChild(opt);
             });
 
             const pageSelect = document.getElementById('page-filter');
@@ -995,19 +1052,23 @@
 
         function getFilteredRuns() {
             const query = document.getElementById('search-input').value.trim().toLowerCase();
-            const station = document.getElementById('station-filter').value;
+            const fromStation = document.getElementById('from-station-filter').value;
+            const toStation = document.getElementById('to-station-filter').value;
             const page = document.getElementById('page-filter').value;
+            const category = document.getElementById('category-filter').value;
             const day = document.getElementById('day-filter').value;
             const type = document.getElementById('type-filter').value;
 
             // 控制清除按鈕與重設按鈕顯示
             document.getElementById('clear-search-btn').classList.toggle('hidden', !query);
-            const hasAnyFilter = query !== '' || station !== 'ALL' || page !== 'ALL' || day !== 'ALL' || type !== 'ALL';
+            const hasAnyFilter = query !== '' || fromStation !== 'ALL' || toStation !== 'ALL' || page !== 'ALL' || category !== 'ALL' || day !== 'ALL' || type !== 'ALL';
             document.getElementById('reset-filter-btn').classList.toggle('hidden', !hasAnyFilter);
 
             return allRuns.filter(r => {
                 if (page !== 'ALL' && r.page !== parseInt(page, 10)) return false;
-                if (station !== 'ALL' && r.fromStation !== station && r.toStation !== station) return false;
+                if (fromStation !== 'ALL' && r.fromStation !== fromStation) return false;
+                if (toStation !== 'ALL' && r.toStation !== toStation) return false;
+                if (category !== 'ALL' && r.trainCategory !== category) return false;
                 if (!runsOnDay(r.note, day)) return false;
 
                 if (type === 'DUTY' && r.isDeadhead) return false;
@@ -1037,8 +1098,10 @@
 
         function resetAllFilters() {
             document.getElementById('search-input').value = '';
-            document.getElementById('station-filter').value = 'ALL';
+            document.getElementById('from-station-filter').value = 'ALL';
+            document.getElementById('to-station-filter').value = 'ALL';
             document.getElementById('page-filter').value = 'ALL';
+            document.getElementById('category-filter').value = 'ALL';
             document.getElementById('day-filter').value = 'ALL';
             document.getElementById('type-filter').value = 'ALL';
             handleFilterChange();
@@ -1078,7 +1141,6 @@
             const banner = document.getElementById('intersecting-trains-banner');
             if (banner) {
                 if (touchingRuns.length > 0) {
-                    // 依車次去重顯示快速標籤
                     const seenKeys = new Set();
                     let chipsHtml = '';
                     touchingRuns.forEach(tr => {
@@ -1122,7 +1184,7 @@
                     <div class="p-12 text-center text-slate-400">
                         <i class="fa-solid fa-train-tram text-4xl mb-3 text-slate-600"></i>
                         <p class="text-base font-medium text-slate-300">${onlyActiveTimeline ? `時間軸 ${activeTimeStr} 沒有壓線的車次` : '找不到符合篩選條件的車次'}</p>
-                        <p class="text-xs mt-1">請嘗試調整時間軸時刻、放寬搜尋關鍵字或取消勾選「只顯示壓到時間軸的車次」</p>
+                        <p class="text-xs mt-1">請嘗試調整起訖車站、車種篩選、時間軸時刻或取消勾選「只顯示壓到時間軸的車次」</p>
                     </div>`;
                 return;
             }
@@ -1139,6 +1201,7 @@
                             numericNo: r.numericNo,
                             earliestDep: r.depMin,
                             minPage: r.page,
+                            isDuplicateTrain: r.isMultiSegment,
                             items: []
                         });
                     }
@@ -1155,6 +1218,7 @@
                     numericNo: r.numericNo,
                     earliestDep: r.depMin,
                     minPage: r.page,
+                    isDuplicateTrain: r.isMultiSegment,
                     items: [r]
                 }));
             }
@@ -1172,11 +1236,11 @@
             const timelineWidth = totalHours * hourWidthPx;
             const leftColWidth = 116; // 固定左側車次欄寬度 (px)
 
-            // 計算基準時間紅線位置 (含第25小時跨夜區段鏡像紅線)
+            // 計算基準時間紅線位置
             const nowLeftPx = (activeMins / 60) * hourWidthPx;
             const overnightNowLeftPx = activeMins < 60 ? ((activeMins + 1440) / 60) * hourWidthPx : null;
 
-            // 1. 建構頂部時間刻度列 (Sticky Header，支援點擊直接移動時間軸紅線)
+            // 1. 建構頂部時間刻度列
             let headerHoursHtml = '';
             for (let h = 0; h < totalHours; h++) {
                 const displayHour = h < 24 ? String(h).padStart(2, '0') + ':00' : '翌日0' + (h - 24) + ':00';
@@ -1255,16 +1319,16 @@
 
                 const laneHeight = 46;
                 const rowHeight = Math.max(52, lanes.length * laneHeight + 8);
-                const isHandoverRow = mergedSegments.length > 1;
+                const isDuplicateRow = row.isDuplicateTrain;
 
                 // 檢查這一列是否有任何一段車次壓到時間軸
                 let rowTouchesTimeline = false;
 
-                // 繪製該列的橫條
+                // 繪製該列的橫條 (依需求第5點：不特別區分樹林交接，統一識別為重複車次)
                 let barsHtml = '';
                 lanes.forEach((lane, laneIdx) => {
                     const topPx = 4 + laneIdx * laneHeight;
-                    lane.segments.forEach((seg, segIdx) => {
+                    lane.segments.forEach((seg) => {
                         const leftPx = (seg.depMin / 60) * hourWidthPx;
                         const rawWidthPx = (seg.durationMin / 60) * hourWidthPx;
                         const widthPx = Math.max(rawWidthPx, 58);
@@ -1280,15 +1344,6 @@
                             ? `<span class="absolute -top-2 -left-1.5 z-30 px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-bold shadow border border-white flex items-center gap-0.5">🔴壓線</span>`
                             : '';
 
-                        // 檢查是否與同軌道的下一段形成「樹林站交接」
-                        let handoverBadge = '';
-                        if (segIdx < lane.segments.length - 1) {
-                            const nextSeg = lane.segments[segIdx + 1];
-                            if (seg.toStation === nextSeg.fromStation && Math.abs(nextSeg.depMin - seg.arrMin) <= 30) {
-                                handoverBadge = `<div class="absolute -right-2.5 top-1/2 -translate-y-1/2 z-20 w-4 h-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[9px] font-bold shadow ring-2 ring-slate-900" title="${seg.toStation}站交接班">⇄</div>`;
-                            }
-                        }
-
                         barsHtml += `
                             <div onclick="openTrainModal(${seg.id})"
                                 style="left: ${leftPx}px; width: ${widthPx}px; top: ${topPx}px; height: ${laneHeight - 6}px;"
@@ -1302,7 +1357,6 @@
                                     <span>${seg.depTime}-${seg.arrTime}</span>
                                     ${seg.note ? `<span class="text-[9px] bg-white/20 px-1 rounded truncate max-w-[70px]">${seg.note}</span>` : ''}
                                 </div>
-                                ${handoverBadge}
                             </div>
                         `;
                     });
@@ -1310,16 +1364,16 @@
 
                 html += `
                     <div class="flex hover:bg-slate-800/40 transition-colors group ${rowTouchesTimeline ? 'bg-rose-950/15' : ''}">
-                        <!-- 固定左側縱軸：車次欄位 (若壓到時間軸也會同步加上紅框標示) -->
+                        <!-- 固定左側縱軸：車次欄位 -->
                         <div onclick="openTrainModal(${row.items[0].id})"
                             style="width: ${leftColWidth}px; min-height: ${rowHeight}px"
                             class="sticky left-0 z-20 ${rowTouchesTimeline ? 'bg-rose-950/90 active-timeline-row-cell' : 'bg-slate-900'} group-hover:bg-slate-800 px-2.5 py-1.5 border-r border-slate-700/80 shrink-0 flex flex-col justify-center cursor-pointer sticky-col-shadow">
                             <div class="flex items-center justify-between gap-1">
-                                <span class="font-mono font-bold text-xs sm:text-sm flex items-center gap-1 ${rowTouchesTimeline ? 'text-rose-300' : (isHandoverRow ? 'text-emerald-400' : 'text-white')}">
+                                <span class="font-mono font-bold text-xs sm:text-sm flex items-center gap-1 ${rowTouchesTimeline ? 'text-rose-300' : (isDuplicateRow ? 'text-emerald-400' : 'text-white')}">
                                     ${rowTouchesTimeline ? '<span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-pulse"></span>' : ''}
                                     <span>${row.rowTitle}</span>
                                 </span>
-                                ${isHandoverRow ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">${mergedSegments.length}段</span>` : `<span class="text-[10px] font-mono text-slate-400">P.${row.items[0].page}</span>`}
+                                ${isDuplicateRow ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">重複</span>` : `<span class="text-[10px] font-mono text-slate-400">P.${row.items[0].page}</span>`}
                             </div>
                             <div class="text-[10px] ${rowTouchesTimeline ? 'text-rose-200/90 font-medium' : 'text-slate-400'} truncate mt-0.5">
                                 ${mergedSegments[0].fromStation}→${mergedSegments[mergedSegments.length - 1].toStation}
@@ -1352,7 +1406,6 @@
             renderGanttView();
         }
 
-        // 捲動至現在時間或清晨起點
         // 捲動至現在時間或基準時間軸位置
         function scrollToCurrentTime() {
             const container = document.getElementById('gantt-scroll-container');
@@ -1425,7 +1478,6 @@
 
             let html = '';
             pagesToShow.forEach(pageNo => {
-                // 取得該頁的所有車次 (完整呈現該頁流程)
                 const pageRuns = allRuns.filter(r => r.page === pageNo);
                 const firstRun = pageRuns[0];
                 const lastRun = pageRuns[pageRuns.length - 1];
@@ -1437,7 +1489,6 @@
                 // 組裝車次流程列表與折返待命時間
                 let stepsHtml = '';
                 pageRuns.forEach((run, idx) => {
-                    // 檢查與上一班車之間的間隔（待命/折返或外宿休息）
                     if (idx > 0) {
                         const prev = pageRuns[idx - 1];
                         let gapMins = run.depMin - (prev.arrMin % 1440);
@@ -1473,7 +1524,7 @@
                                     </div>
                                     <div class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400">
                                         <span>行車 ${formatDuration(run.durationMin)}</span>
-                                        ${run.isMultiSegment ? `<span class="text-emerald-400 font-medium"><i class="fa-solid fa-people-arrows mr-0.5"></i>有交接/多段</span>` : ''}
+                                        ${run.isMultiSegment ? `<span class="text-emerald-400 font-medium"><i class="fa-solid fa-clone mr-0.5"></i>重複車次</span>` : ''}
                                         ${run.note ? `<span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">${run.note}</span>` : ''}
                                     </div>
                                 </div>
@@ -1533,28 +1584,33 @@
         }
 
         // ============================================================================
-        // 6. 視角 3：樹林交接班 & 跨頁重複車次檢視
+        // 6. 視角 3：重複車次檢視 (不區分樹林交接，統一識別重複車次)
         // ============================================================================
         function renderHandoverView() {
             const container = document.getElementById('handover-cards-container');
+            const filteredRuns = getFilteredRuns();
+            const filteredIds = new Set(filteredRuns.map(r => r.id));
+
             const multiGroups = Object.entries(baseTrainMap)
-                .filter(([baseNo, list]) => list.length > 1)
+                .filter(([baseNo, list]) => list.length > 1 && list.some(r => filteredIds.has(r.id)))
                 .sort((a, b) => a[1][0].numericNo - b[1][0].numericNo);
 
-            document.getElementById('stats-counter').textContent = `共有 ${multiGroups.length} 組車次具有樹林交接班或跨頁多段排班`;
+            document.getElementById('stats-counter').textContent = `共有 ${multiGroups.length} 組重複車次`;
+
+            if (multiGroups.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full p-12 text-center text-slate-400 bg-slate-900 rounded-2xl border border-slate-800">
+                        <p class="text-base font-medium text-slate-300">沒有符合篩選條件的重複車次</p>
+                    </div>`;
+                return;
+            }
 
             let html = '';
             multiGroups.forEach(([baseNo, list]) => {
-                // 依開車時間排序，清楚呈現上一棒與下一棒
                 const sorted = [...list].sort((a, b) => a.depMin - b.depMin || a.page - b.page);
 
-                // 判斷是否包含「樹林站交接」(一段抵達樹林、另一段從樹林出發)
-                const hasShulinArr = sorted.some(r => r.toStation === '樹林');
-                const hasShulinDep = sorted.some(r => r.fromStation === '樹林');
-                const isShulinHandover = hasShulinArr && hasShulinDep;
-
                 let segmentsHtml = '';
-                sorted.forEach((r, idx) => {
+                sorted.forEach((r) => {
                     segmentsHtml += `
                         <div onclick="openTrainModal(${r.id})" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 flex items-center justify-between gap-2 cursor-pointer transition">
                             <div class="flex items-center gap-2.5">
@@ -1572,10 +1628,7 @@
                         <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
                             <div class="flex items-center gap-2">
                                 <span class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-mono font-bold text-sm">${baseNo} 車次</span>
-                                ${isShulinHandover
-                                    ? `<span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-medium"><i class="fa-solid fa-repeat mr-1"></i>樹林交接續駛</span>`
-                                    : `<span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">多頁共用/區間</span>`
-                                }
+                                <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-medium"><i class="fa-solid fa-clone mr-1"></i>重複車次</span>
                             </div>
                             <span class="text-xs font-mono text-slate-400">共 ${sorted.length} 筆班表紀錄</span>
                         </div>
@@ -1592,23 +1645,30 @@
         // ============================================================================
         // 7. 互動視窗 (Modal) 與釘選書籤功能
         // ============================================================================
+        function getCategoryLabel(cat) {
+            if (cat === 'RESERVED') return '對號車 (3碼)';
+            if (cat === 'LOCAL') return '區間(快) (4碼)';
+            if (cat === 'TOURIST') return '觀光/專列';
+            return '其他車種';
+        }
+
         function openTrainModal(runId) {
             const run = allRuns.find(r => r.id === runId);
             if (!run) return;
 
             document.getElementById('modal-train-badge').textContent = run.trainNo;
             document.getElementById('modal-title').textContent = `${run.fromStation} ➔ ${run.toStation}`;
-            document.getElementById('modal-subtitle').textContent = `所屬班表：第 ${run.page} 頁（第 ${run.seqInPage} 趟勤務 • 第 ${run.dayInShift} 天）`;
+            document.getElementById('modal-subtitle').textContent = `所屬班表：第 ${run.page} 頁（第 ${run.seqInPage} 趟勤務 • 第 ${run.dayInShift} 天 • ${getCategoryLabel(run.trainCategory)}）`;
 
-            // 找出同一個基礎車次的所有其他班段 (顯示交接班資訊)
+            // 找出同一個基礎車次的所有其他班段 (顯示重複車次資訊)
             const sameTrainRuns = baseTrainMap[run.baseNo] || [];
             let relatedHtml = '';
             if (sameTrainRuns.length > 1) {
                 relatedHtml = `
                     <div class="bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-3.5 space-y-2">
                         <div class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                            <i class="fa-solid fa-people-arrows"></i>
-                            <span>同車次 (${run.baseNo}) 交接班 / 其他班表頁紀錄：</span>
+                            <i class="fa-solid fa-clone"></i>
+                            <span>同車次 (${run.baseNo}) 重複車次紀錄：</span>
                         </div>
                         <div class="space-y-1.5">
                             ${sameTrainRuns.map(other => `
@@ -1628,7 +1688,7 @@
                 <div onclick="openTrainModal(${pr.id})" class="p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer ${pr.id === run.id ? 'bg-sky-500/25 border border-sky-500/50 text-white font-bold' : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300'}">
                     <div class="flex items-center gap-2">
                         <span class="font-mono text-[11px] text-slate-400">D${pr.dayInShift}</span>
-                        <span class="font-mono font-bold text-sky-300 w-14">${pr.trainNo}</span>
+                        <span class="font-mono font-bold text-sky-300 w-16">${pr.trainNo}</span>
                         <span>${pr.fromStation} ${pr.depTime} → ${pr.toStation} ${pr.arrTime}</span>
                     </div>
                     <span class="text-[10px] text-slate-400">${pr.note}</span>
@@ -1639,7 +1699,7 @@
                 <!-- 核心開車與抵達時間大字卡 -->
                 <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 flex items-center justify-between text-center">
                     <div class="flex-1">
-                        <div class="text-xs text-slate-400">出發開車</div>
+                        <div class="text-xs text-slate-400">起站出發</div>
                         <div class="text-lg sm:text-xl font-bold text-white mt-0.5">${run.fromStation}</div>
                         <div class="text-base sm:text-lg font-mono font-bold text-sky-400">${run.depTime}</div>
                     </div>
@@ -1648,10 +1708,10 @@
                         <div class="w-16 sm:w-24 h-0.5 bg-gradient-to-r from-sky-500 to-emerald-500 relative">
                             <i class="fa-solid fa-train absolute -top-2 left-1/2 -translate-x-1/2 text-xs text-white"></i>
                         </div>
-                        <span class="text-[11px] text-slate-400 mt-1">${run.isDeadhead ? '便乘移動' : (run.isParcel ? '行包專列' : '值乘勤務')}</span>
+                        <span class="text-[11px] text-slate-400 mt-1">${run.isDeadhead ? '便乘移動' : (run.isParcel ? '回送/行包' : '值乘勤務')}</span>
                     </div>
                     <div class="flex-1">
-                        <div class="text-xs text-slate-400">終點抵達</div>
+                        <div class="text-xs text-slate-400">訖站抵達</div>
                         <div class="text-lg sm:text-xl font-bold text-white mt-0.5">${run.toStation}</div>
                         <div class="text-base sm:text-lg font-mono font-bold text-emerald-400">${run.arrTime}</div>
                     </div>
