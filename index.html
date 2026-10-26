@@ -178,10 +178,10 @@
                 </div>
             </div>
 
-            <!-- 第二排：車種選單（對號/區間/觀光）、勤務性質選單、星期選單（含底部校閱提示文字） -->
+            <!-- 第二排：車種選單（對號/區間/觀光）、勤務性質選單、年/月/日與星期選單（含台灣例假日識別） -->
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start">
                 <!-- 車種類別篩選 (對號車3碼 / 區間快4碼 / 觀光專列) -->
-                <div class="sm:col-span-4">
+                <div class="sm:col-span-3">
                     <select id="category-filter" onchange="handleFilterChange()" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
                         <option value="ALL">🚄 全部車種 (對號 / 區間 / 觀光專列)</option>
                         <option value="RESERVED">對號車（車次數字 3 碼）</option>
@@ -201,18 +201,44 @@
                     </select>
                 </div>
 
-                <!-- 星期篩選 + 建議標注文字 -->
-                <div class="sm:col-span-5 flex flex-col">
-                    <select id="day-filter" onchange="handleFilterChange()" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
-                        <option value="ALL">📅 不限星期 (全部顯示)</option>
-                        <option value="1">週一 行駛班次</option>
-                        <option value="2">週二～週四 行駛班次</option>
-                        <option value="5">週五 行駛班次</option>
-                        <option value="6">週六 行駛班次</option>
-                        <option value="7">週日 行駛班次</option>
-                    </select>
-                    <p class="text-[11px] text-amber-300/90 mt-1 px-1 leading-snug">
-                        <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-400"></i>建議選擇不限星期（全部顯示），以免漏看車次；有關星期幾行駛什麼車次，目前還在校閱中。
+                <!-- 年月日選單 + 星期篩選 + 台灣例假日識別狀態 -->
+                <div class="sm:col-span-6 flex flex-col gap-1.5">
+                    <div class="grid grid-cols-12 gap-1.5 items-center">
+                        <!-- 年 -->
+                        <select id="year-filter" onchange="handleYMDChange('year')" class="col-span-3 bg-slate-800/90 border border-slate-700 rounded-xl px-2 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500 font-mono">
+                            <option value="ALL">📅 不限年</option>
+                        </select>
+                        <!-- 月 -->
+                        <select id="month-filter" onchange="handleYMDChange('month')" class="col-span-2 bg-slate-800/90 border border-slate-700 rounded-xl px-2 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500 font-mono">
+                            <option value="ALL">不限月</option>
+                        </select>
+                        <!-- 日 -->
+                        <select id="date-filter" onchange="handleYMDChange('date')" class="col-span-2 bg-slate-800/90 border border-slate-700 rounded-xl px-2 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500 font-mono">
+                            <option value="ALL">不限日</option>
+                        </select>
+                        <!-- 今日快捷按鈕 -->
+                        <button onclick="setFilterToToday()" type="button" class="col-span-1 py-2 px-1 rounded-xl bg-sky-600/25 hover:bg-sky-600 text-sky-300 hover:text-white border border-sky-500/40 text-xs font-bold transition" title="快速帶入今天日期">
+                            今日
+                        </button>
+                        <!-- 星期 / 例假日篩選 -->
+                        <select id="day-filter" onchange="handleDaySelectManualChange()" class="col-span-4 bg-slate-800/90 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
+                            <option value="ALL">📅 不限星期 (全部顯示)</option>
+                            <option value="1">週一 行駛班次</option>
+                            <option value="2">週二～週四 行駛班次</option>
+                            <option value="5">週五 行駛班次</option>
+                            <option value="6">週六 行駛班次</option>
+                            <option value="7">週日 行駛班次</option>
+                            <option value="HOLIDAY">🎌 台灣例假日 / 國定假日</option>
+                        </select>
+                    </div>
+
+                    <!-- 台灣例假日識別結果徽章 -->
+                    <div id="tw-holiday-status-bar" class="hidden px-2.5 py-1.5 rounded-xl text-xs font-medium flex flex-wrap items-center justify-between gap-2 border">
+                        <!-- 由 JS 動態填入日期、星期與台灣例假日識別狀態 -->
+                    </div>
+
+                    <p class="text-[11px] text-amber-300/90 px-1 leading-snug">
+                        <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-400"></i>建議選擇不限星期（全部顯示），以免漏看車次；選擇「年/月/日」可自動識別台灣國定例假日與對應行駛班次。
                     </p>
                 </div>
             </div>
@@ -221,14 +247,16 @@
             <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-400">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span class="font-medium text-slate-300" id="stats-counter">載入中...</span>
-                    <span class="inline-flex items-center gap-1 font-medium text-rose-400"><span class="w-2.5 h-2.5 rounded-sm bg-sky-500 border-2 border-red-500 inline-block shadow-[0_0_6px_#ef4444]"></span>壓到時間軸(紅框)</span>
+                    <span class="inline-flex items-center gap-1 font-medium text-rose-400"><span class="w-2.5 h-2.5 rounded-sm bg-sky-500 border-2 border-red-500 inline-block shadow-[0_0_6px_#ef4444]"></span>乘務中(紅框)</span>
                     <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-sky-500 inline-block"></span>一般值乘</span>
                     <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block"></span>便乘(便)</span>
                     <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>重複車次</span>
                     <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block"></span>回送</span>
+                    <span class="inline-flex items-center gap-1 text-indigo-300"><span class="w-2.5 h-2.5 rounded-sm bg-slate-700 outline outline-2 outline-indigo-300 inline-block"></span>🌙 過夜前最後車次</span>
+                    <span class="inline-flex items-center gap-1 text-yellow-300"><span class="w-2.5 h-2.5 rounded-sm bg-slate-700 outline outline-2 outline-yellow-300 inline-block"></span>☀️ 隔日首班車次</span>
                 </div>
-                <button onclick="resetAllFilters()" id="reset-filter-btn" class="hidden text-sky-400 hover:text-sky-300 font-medium flex items-center gap-1">
-                    <i class="fa-solid fa-rotate-left"></i> 重設所有篩選
+                <button onclick="resetAllFilters()" id="reset-filter-btn" class="hidden px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold text-sm sm:text-base shadow-lg shadow-sky-600/30 border border-sky-400/50 flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-rotate-left text-base"></i> 重設所有篩選
                 </button>
             </div>
         </div>
@@ -265,7 +293,7 @@
                         <div class="flex items-center gap-1.5 text-xs">
                             <label class="inline-flex items-center gap-1.5 cursor-pointer bg-rose-950/50 hover:bg-rose-900/50 px-2.5 py-1.5 rounded-lg border border-rose-500/40 select-none">
                                 <input type="checkbox" id="only-active-timeline" onchange="renderGanttView()" class="rounded text-rose-500 focus:ring-0 bg-slate-900 border-rose-500">
-                                <span class="text-rose-300 font-medium">🔴 只顯示壓到時間軸的車次</span>
+                                <span class="text-rose-300 font-medium">🔴 只顯示壓到時間軸（乘務中）的車次</span>
                             </label>
                         </div>
                     </div>
@@ -293,14 +321,14 @@
 
                 <!-- 壓到時間軸車次即時清單橫條 -->
                 <div id="intersecting-trains-banner" class="bg-rose-950/30 border border-rose-500/30 rounded-xl px-3 py-2 flex flex-wrap items-center gap-2 text-xs">
-                    <!-- 由 JS 動態填入目前壓到時間軸的車次 -->
+                    <!-- 由 JS 動態填入目前乘務中的車次 -->
                 </div>
             </div>
 
             <!-- 手機版滑動提示 -->
             <div class="flex flex-wrap items-center justify-between text-[11px] text-slate-400 px-1 gap-1">
                 <span><i class="fa-solid fa-hand-pointer mr-1 text-sky-400"></i>左右滑動時間軸，點擊上方時間刻度可移動紅線、點擊車次查看完整資訊</span>
-                <span class="text-rose-400 font-medium">🔴 紅框代表該車次正壓在時間軸線上</span>
+                <span class="text-rose-400 font-medium">🔴 紅框（乘務中）代表該車次正壓在時間軸線上</span>
             </div>
 
             <!-- 甘特圖本體容器 -->
@@ -326,7 +354,7 @@
                         <div>
                             <div class="text-xs sm:text-sm font-bold text-white flex flex-wrap items-center gap-1.5">
                                 <span>環島列車動態雷達</span>
-                                <span id="map-active-count-badge" class="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[11px] font-mono">0 班行駛中</span>
+                                <span id="map-active-count-badge" class="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[11px] font-mono">0 班乘務中</span>
                             </div>
                             <p class="text-[11px] text-slate-400">左右拖曳滑桿或點擊自動播放，即時預覽全島線上值乘與便乘列車位置</p>
                         </div>
@@ -389,7 +417,7 @@
                             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-100 border-2 border-sky-400 inline-block"></span>主要大站</span>
                             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-purple-400 border border-white inline-block"></span>基地/調車場支線</span>
                             <span class="flex items-center gap-1"><span class="w-3 h-1 bg-cyan-400 rounded inline-block"></span>海線(179次)</span>
-                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 border border-white inline-block"></span>壓線行駛列車</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 border border-white inline-block"></span>乘務中列車</span>
                         </div>
                     </div>
 
@@ -397,7 +425,7 @@
                     <div class="w-full flex justify-center items-center bg-slate-950/70 rounded-xl border border-slate-800/80 p-2">
                         <svg id="island-rail-map" viewBox="0 0 800 920" class="w-full max-w-[620px] h-auto select-none">
                             <defs>
-                                <!-- 樹林核心站靜態柔和光暈漸層 (移除會導致 iOS Safari 閃爍的 SVG Filter 與縮放動畫) -->
+                                <!-- 樹林核心站靜態柔和光暈漸層 -->
                                 <radialGradient id="shulin-halo" cx="50%" cy="50%" r="50%">
                                     <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.55" />
                                     <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
@@ -420,7 +448,7 @@
                             <!-- Layer 4: 26 個車站節點與站名標籤層 -->
                             <g id="map-layer-stations"></g>
 
-                            <!-- Layer 5: 動態壓線列車位置與膠囊層 -->
+                            <!-- Layer 5: 動態乘務中列車位置與膠囊層 -->
                             <g id="map-layer-live-trains"></g>
                         </svg>
                     </div>
@@ -431,7 +459,7 @@
                     <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
                         <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
                             <i class="fa-solid fa-satellite-dish text-rose-400"></i>
-                            <span>壓線行駛中列車清單</span>
+                            <span>乘務中列車清單</span>
                         </h3>
                         <span class="text-[11px] text-slate-400 font-mono">點擊卡片查看詳情</span>
                     </div>
@@ -543,14 +571,14 @@
     <footer class="border-t border-slate-800/80 py-4 px-4 text-center text-xs text-slate-500 mt-6">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
             <span>🚆 班表統整系統（Beta） • 林O本製作。僅供參考用，不保證資料正確、也不保證更新</span>
-            <span>支援半點時刻 (.5 = 30秒) 精準定位、環島雷達與重複車次統整</span>
+            <span>支援半點時刻 (.5 = 30秒) 精準定位、台灣例假日自動識別、環島雷達與重複車次統整</span>
         </div>
     </footer>
 
     <!-- 核心資料與邏輯腳本 -->
     <script>
         // ============================================================================
-        // 1. 完整 53 頁班表原始資料庫 (一字不漏完整建檔)
+        // 1. 完整 53 頁班表原始資料庫 (含最新修訂行駛日與備註)
         // 格式: [車次, 開車時間, 出發站, 抵達時間, 抵達站, 行駛日/備註]
         // ============================================================================
         const RAW_SCHEDULE_PAGES = {
@@ -562,16 +590,16 @@
             2: [
                 ["1161", "11:22", "樹林", "12:59", "新竹", ""],
                 ["1212", "14:27", "新竹", "16:05", "樹林", ""],
-                ["277便", "17:55.5", "樹林", "18:11", "桃園", ""],
-                ["4006", "05:46", "桃園", "08:57", "和平", ""],
+                ["277便", "17:55.5", "樹林", "18:11", "桃園", "五、六停駛"],
+                ["4006", "05:46", "桃園", "08:57", "和平", "六、日停駛"],
                 ["4019", "09:32", "和平", "10:21", "宜蘭", ""],
                 ["219", "13:25", "宜蘭", "15:12", "樹林", ""]
             ],
             3: [
                 ["1161", "11:22", "樹林", "12:59", "新竹", ""],
                 ["1212", "14:27", "新竹", "16:05", "樹林", ""],
-                ["4008A", "06:03", "樹林", "06:10", "板橋", ""],
-                ["4008", "06:12", "板橋", "08:57", "和平", ""],
+                ["4008A", "06:03", "樹林", "06:10", "板橋", "六、日行駛"],
+                ["4008", "06:12", "板橋", "08:57", "和平", "六、日行駛"],
                 ["4019", "09:32", "和平", "10:21", "宜蘭", ""],
                 ["219", "13:25", "宜蘭", "15:12", "樹林", ""]
             ],
@@ -626,16 +654,16 @@
             ],
             12: [
                 ["4037", "23:09.5", "樹林", "23:26", "桃園", "五、六停駛"],
-                ["1298B便", "23:51", "桃園", "00:07", "樹林", ""],
+                ["1298B便", "23:51", "桃園", "00:07", "樹林", "五、六停駛"],
                 ["1008A", "06:18", "樹林", "06:53", "埔心", "六、日、例假日停駛"],
                 ["1008", "07:17", "埔心", "08:53", "七堵", "六、日、例假日停駛"],
                 ["1008B", "09:04", "七堵", "09:49", "樹林", "六、日、例假日停駛"]
             ],
             13: [
-                ["236", "15:23", "樹林", "18:01", "花蓮", ""],
-                ["237", "19:38", "花蓮", "22:21", "樹林", ""],
-                ["127A", "10:49", "樹林", "11:14", "松山", ""],
-                ["127", "11:28", "松山", "13:37", "彰化", ""],
+                ["236", "15:23", "樹林", "18:01", "花蓮", "週五行駛"],
+                ["237", "19:38", "花蓮", "22:21", "樹林", "週五行駛"],
+                ["127A", "10:49", "樹林", "11:14", "松山", "六、日行駛"],
+                ["127", "11:28", "松山", "13:37", "彰化", "六、日行駛"],
                 ["180便", "14:09", "彰化", "16:35.5", "樹林", "六、日行駛"]
             ],
             14: [
@@ -724,7 +752,7 @@
             ],
             25: [
                 ["224", "11:36", "樹林", "14:45", "花蓮", "二、三、四行駛"],
-                ["231便", "16:45", "花蓮", "19:25", "樹林", ""],
+                ["231便", "16:45", "花蓮", "19:25", "樹林", "二、三、四行駛"],
                 ["1106便", "05:24", "樹林", "05:55", "南港", ""],
                 ["1110", "06:38", "南港", "07:12", "基隆", ""],
                 ["1135", "07:24", "基隆", "09:56", "富岡基地", "六、日、例假日停駛"],
@@ -754,14 +782,14 @@
                 ["1187", "12:27", "基隆", "13:32.5", "樹林", ""]
             ],
             29: [
-                ["236", "15:23", "樹林", "18:01", "花蓮", ""],
+                ["236", "15:23", "樹林", "18:01", "花蓮", "週日行駛"],
                 ["443", "20:17", "花蓮", "22:48", "樹林", "週日行駛"]
             ],
             30: [
                 ["411便", "12:46", "樹林", "12:52", "樹調", ""],
-                ["234", "13:55", "樹調", "16:44", "花蓮", ""],
-                ["234B", "17:02", "花蓮", "17:08", "吉安", ""],
-                ["233A", "17:44", "吉安", "17:50", "花蓮", ""],
+                ["234", "13:55", "樹調", "16:44", "花蓮", "週日行駛"],
+                ["234B", "17:02", "花蓮", "17:08", "吉安", "週日行駛"],
+                ["233A", "17:44", "吉安", "17:50", "花蓮", "週日行駛"],
                 ["237", "19:38", "花蓮", "22:21", "樹林", "週日行駛"]
             ],
             31: [
@@ -800,8 +828,8 @@
                 ["1268", "19:35", "新竹", "22:23", "基隆", ""],
                 ["1268B", "22:35", "基隆", "22:46", "七堵", ""],
                 ["1289便", "23:23", "七堵", "00:13", "樹林", ""],
-                ["1170", "12:00", "樹林", "12:52", "七堵", ""],
-                ["1178便", "13:17", "七堵", "13:29", "基隆", ""],
+                ["1170", "12:00", "樹林", "12:52", "七堵", "五、六行駛"],
+                ["1178便", "13:17", "七堵", "13:29", "基隆", "五、六行駛"],
                 ["1217", "15:26", "基隆", "16:30.5", "樹林", "五、六行駛"]
             ],
             36: [
@@ -915,74 +943,147 @@
         const TOURIST_TRAIN_NUMS = new Set(['6652', '6655', '6616', '6615', '1']);
 
         // ============================================================================
+        // 1.2 台灣國定例假日與補假資料庫 (2025 ~ 2028，依行政院人事行政總處行事曆)
+        // ============================================================================
+        const TAIWAN_HOLIDAYS = {
+            // 2025 (民國114年)
+            "2025-01-01": "中華民國開國紀念日",
+            "2025-01-27": "小年夜（彈性放假）",
+            "2025-01-28": "農曆除夕",
+            "2025-01-29": "春節初一",
+            "2025-01-30": "春節初二",
+            "2025-01-31": "春節初三",
+            "2025-02-28": "和平紀念日",
+            "2025-04-03": "兒童節補假",
+            "2025-04-04": "兒童節及民族掃墓節",
+            "2025-05-01": "勞動節",
+            "2025-05-30": "端午節補假",
+            "2025-05-31": "端午節",
+            "2025-09-28": "孔子誕辰紀念日（教師節）",
+            "2025-09-29": "教師節補假",
+            "2025-10-06": "中秋節",
+            "2025-10-10": "國慶日",
+            "2025-10-24": "臺灣光復節補假",
+            "2025-10-25": "臺灣光復暨金門古寧頭大捷紀念日",
+            "2025-12-25": "行憲紀念日",
+
+            // 2026 (民國115年)
+            "2026-01-01": "中華民國開國紀念日",
+            "2026-02-15": "小年夜",
+            "2026-02-16": "農曆除夕",
+            "2026-02-17": "春節初一",
+            "2026-02-18": "春節初二",
+            "2026-02-19": "春節初三",
+            "2026-02-20": "春節補假",
+            "2026-02-27": "和平紀念日補假",
+            "2026-02-28": "和平紀念日",
+            "2026-04-03": "兒童節補假",
+            "2026-04-04": "兒童節",
+            "2026-04-05": "民族掃墓節（清明節）",
+            "2026-04-06": "清明節補假",
+            "2026-05-01": "勞動節",
+            "2026-06-19": "端午節",
+            "2026-09-25": "中秋節",
+            "2026-09-28": "孔子誕辰紀念日（教師節）",
+            "2026-10-09": "國慶日補假",
+            "2026-10-10": "國慶日",
+            "2026-10-25": "臺灣光復暨金門古寧頭大捷紀念日",
+            "2026-10-26": "臺灣光復節補假",
+            "2026-12-25": "行憲紀念日",
+
+            // 2027 (民國116年)
+            "2027-01-01": "中華民國開國紀念日",
+            "2027-02-04": "小年夜",
+            "2027-02-05": "農曆除夕",
+            "2027-02-06": "春節初一",
+            "2027-02-07": "春節初二",
+            "2027-02-08": "春節初三",
+            "2027-02-09": "春節補假",
+            "2027-02-10": "春節補假",
+            "2027-02-28": "和平紀念日",
+            "2027-03-01": "和平紀念日補假",
+            "2027-04-04": "兒童節",
+            "2027-04-05": "民族掃墓節（清明節）",
+            "2027-04-06": "兒童節及清明節補假",
+            "2027-04-30": "勞動節補假",
+            "2027-05-01": "勞動節",
+            "2027-06-09": "端午節",
+            "2027-09-15": "中秋節",
+            "2027-09-28": "孔子誕辰紀念日（教師節）",
+            "2027-10-10": "國慶日",
+            "2027-10-11": "國慶日補假",
+            "2027-10-25": "臺灣光復暨金門古寧頭大捷紀念日",
+            "2027-12-24": "行憲紀念日補假",
+            "2027-12-25": "行憲紀念日"
+        };
+
+        // 通用固定國定假日 (若選擇其他年份時自動兜底識別)
+        const FIXED_MM_DD_HOLIDAYS = {
+            "01-01": "中華民國開國紀念日",
+            "02-28": "和平紀念日",
+            "04-04": "兒童節",
+            "04-05": "民族掃墓節（清明節）",
+            "05-01": "勞動節",
+            "09-28": "孔子誕辰紀念日（教師節）",
+            "10-10": "國慶日",
+            "10-25": "臺灣光復紀念日",
+            "12-25": "行憲紀念日"
+        };
+
+        function getTaiwanHolidayName(y, m, d) {
+            if (!y || !m || !d || y === 'ALL' || m === 'ALL' || d === 'ALL') return null;
+            const mm = String(m).padStart(2, '0');
+            const dd = String(d).padStart(2, '0');
+            const key = `${y}-${mm}-${dd}`;
+            if (TAIWAN_HOLIDAYS[key]) return TAIWAN_HOLIDAYS[key];
+            if (FIXED_MM_DD_HOLIDAYS[`${mm}-${dd}`]) return FIXED_MM_DD_HOLIDAYS[`${mm}-${dd}`];
+            return null;
+        }
+
+        // ============================================================================
         // 1.5 環島鐵路拓撲座標與 26 個車站節點定義 (對應 SVG viewBox: 800 x 920)
-        // 包含：
-        // - 樹調：從「樹林」分岔出去的支線
-        // - 北湖：位於「新富」與「湖口」之間的主線車站
-        // - 富岡基地：從「北湖」分岔出去的支線
-        // - 海線示意：竹南 ➔ 彰化 (供 179 次行駛)
         // ============================================================================
         const STATION_NODES = {
-            // --- 基隆支線 (由七堵分岔往北) ---
             "基隆":     { x: 470, y: 55,  branch: "keelung", ringIdx: 0.5, role: "terminal", labelPos: "top" },
-
-            // --- 北部核心段 ---
             "七堵":     { x: 470, y: 115, branch: "main",    ringIdx: 1,   role: "major",    labelPos: "right" },
             "南港":     { x: 410, y: 115, branch: "main",    ringIdx: 2,   role: "normal",   labelPos: "top" },
             "松山":     { x: 350, y: 115, branch: "main",    ringIdx: 3,   role: "normal",   labelPos: "bottom" },
             "台北":     { x: 290, y: 115, branch: "main",    ringIdx: 4,   role: "major",    labelPos: "top" },
             "板橋":     { x: 235, y: 140, branch: "main",    ringIdx: 5,   role: "major",    labelPos: "top-left" },
             "樹林":     { x: 195, y: 185, branch: "main",    ringIdx: 6,   role: "hub",      labelPos: "right" },
-
-            // --- 樹調支線 (由樹林分岔出去的支線) ---
             "樹調":     { x: 120, y: 205, branch: "shudiao", ringIdx: 6.5, role: "depot",    labelPos: "left" },
-
-            // --- 桃竹苗段 (由北往南沿西岸下行) ---
             "桃園":     { x: 170, y: 255, branch: "main",    ringIdx: 8,   role: "normal",   labelPos: "left" },
             "中壢":     { x: 160, y: 310, branch: "main",    ringIdx: 9,   role: "normal",   labelPos: "left" },
             "埔心":     { x: 155, y: 360, branch: "main",    ringIdx: 10,  role: "normal",   labelPos: "left" },
             "新富":     { x: 155, y: 410, branch: "main",    ringIdx: 11,  role: "depot",    labelPos: "left" },
             "北湖":     { x: 155, y: 455, branch: "main",    ringIdx: 12,  role: "normal",   labelPos: "right" },
-
-            // --- 富岡基地支線 (由北湖分岔出去的支線) ---
             "富岡基地": { x: 82,  y: 440, branch: "fugang",  ringIdx: 12.5,role: "depot",    labelPos: "top" },
-
             "湖口":     { x: 158, y: 500, branch: "main",    ringIdx: 13,  role: "normal",   labelPos: "left" },
             "新豐":     { x: 162, y: 545, branch: "main",    ringIdx: 14,  role: "normal",   labelPos: "left" },
             "新竹":     { x: 168, y: 590, branch: "main",    ringIdx: 15,  role: "major",    labelPos: "left" },
             "竹南":     { x: 175, y: 640, branch: "main",    ringIdx: 16,  role: "major",    labelPos: "right" },
             "苗栗":     { x: 205, y: 700, branch: "main",    ringIdx: 17,  role: "major",    labelPos: "right" },
-
-            // --- 中南部段 ---
             "彰化":     { x: 185, y: 765, branch: "main",    ringIdx: 18,  role: "major",    labelPos: "right" },
             "員林":     { x: 210, y: 815, branch: "main",    ringIdx: 19,  role: "normal",   labelPos: "left" },
             "潮州":     { x: 310, y: 865, branch: "main",    ringIdx: 20,  role: "terminal", labelPos: "bottom" },
-
-            // --- 東部幹線 / 宜蘭線 / 北迴線 (由七堵往東南順時針下行) ---
             "瑞芳":     { x: 545, y: 135, branch: "main",    ringIdx: 30,  role: "major",    labelPos: "top-right" },
             "福隆":     { x: 605, y: 175, branch: "main",    ringIdx: 29,  role: "normal",   labelPos: "right" },
             "大里":     { x: 635, y: 220, branch: "main",    ringIdx: 28,  role: "normal",   labelPos: "right" },
             "宜蘭":     { x: 650, y: 275, branch: "main",    ringIdx: 27,  role: "major",    labelPos: "right" },
             "二結":     { x: 650, y: 325, branch: "main",    ringIdx: 26,  role: "normal",   labelPos: "right" },
-
-            // --- 蘇澳支線 (由二結分岔) ---
             "蘇澳":     { x: 715, y: 365, branch: "suao",    ringIdx: 25.5,role: "terminal", labelPos: "right" },
-
-            // --- 北迴與花東段 ---
             "和平":     { x: 640, y: 425, branch: "main",    ringIdx: 25,  role: "normal",   labelPos: "right" },
             "花蓮":     { x: 620, y: 525, branch: "main",    ringIdx: 24,  role: "major",    labelPos: "right" },
             "吉安":     { x: 610, y: 575, branch: "main",    ringIdx: 23,  role: "normal",   labelPos: "right" },
             "台東":     { x: 555, y: 745, branch: "main",    ringIdx: 22,  role: "terminal", labelPos: "right" }
         };
 
-        // 海線示意虛擬路徑座標點 (從竹南往西繞海側至彰化，供 179 次行駛與繪圖)
         const COAST_LINE_WAYPOINT = {
             name: "海線",
             x: 112,
             y: 702
         };
 
-        // 主幹線順時針拓撲順序 (樹調與富岡基地為支線，北湖位於新富與湖口之間)
         const MAIN_LINE_SEQUENCE = [
             "潮州", "員林", "彰化", "苗栗", "竹南", "新竹", "新豐", "湖口",
             "北湖", "新富", "埔心", "中壢", "桃園", "樹林", "板橋",
@@ -999,12 +1100,31 @@
         let hourWidthPx = 70;
         let pinnedPage = localStorage.getItem('conductor_pinned_page') ? parseInt(localStorage.getItem('conductor_pinned_page')) : null;
 
-        // 時間軸基準分鐘數與自動播放計時器
         let isCustomTimeline = false;
         let customTimelineMins = 0;
         let timelinePlayTimer = null;
         let selectedMapStation = null;
         let lastAutoRenderedMinute = -1;
+        let pageOvernightInfo = {};
+
+        // 取得某頁的過夜分界文字（下拉選單 / 提示用）
+        function getPageOvernightLabel(page) {
+            const bounds = pageOvernightInfo[page] || [];
+            if (!bounds.length) return '無過夜';
+            return bounds.map(b => {
+                if (b.last && b.first) return `🌙${b.last.trainNo} → ☀️${b.first.trainNo}`;
+                if (b.last) return `🌙${b.last.trainNo}`;
+                if (b.first) return `☀️${b.first.trainNo}`;
+                return '';
+            }).filter(Boolean).join('、') || '無過夜';
+        }
+
+        // 取得一組車次（可能合併多頁）中，哪些頁把它當作宿前末班 / 隔日首班
+        function getOvernightMarks(runs) {
+            const lastPages = [...new Set(runs.filter(r => r.overnightLast).map(r => r.page))];
+            const firstPages = [...new Set(runs.filter(r => r.overnightFirst).map(r => r.page))];
+            return { lastPages, firstPages };
+        }
 
         function getActiveTimelineMinutes() {
             if (isCustomTimeline) return customTimelineMins;
@@ -1019,7 +1139,7 @@
             return `${h}:${m}`;
         }
 
-        // 判斷某筆車次區間是否「壓到時間軸」
+        // 判斷某筆車次區間是否「壓到時間軸（乘務中）」
         function isRunTouchingTimeline(run, activeMins) {
             if (activeMins >= run.depMin && activeMins <= run.arrMin) {
                 return true;
@@ -1124,16 +1244,41 @@
             return 'OTHER';
         }
 
-        function runsOnDay(note, dayCode) {
-            if (!note || dayCode === 'ALL') return true;
-            const d = parseInt(dayCode, 10);
+        // 支援星期與台灣例假日判斷
+        function runsOnDay(note, dayCode, isHolidayFlag = false) {
+            if (!note) return true;
+            if (dayCode === 'ALL' && !isHolidayFlag) return true;
+
+            const isHoliday = isHolidayFlag || dayCode === 'HOLIDAY';
+            const d = (dayCode !== 'ALL' && dayCode !== 'HOLIDAY') ? parseInt(dayCode, 10) : null;
+
+            // 若備註含「例假日」規則，且當日為台灣例假日，優先以例假日條件判定
+            if (isHoliday) {
+                if (note.includes('例假日停駛')) return false;
+                if (note.includes('例假日行駛')) return true;
+                // 若僅選「台灣例假日」且未指定具體星期，將例假日視同週日/假日班次基準
+                if (d === null) {
+                    if (note.includes('六、日停駛')) return false;
+                    if (note.includes('六、日行駛') || note.includes('五、六、日') || note.includes('週日行駛') || note.includes('日、一、二、三、四行駛')) return true;
+                    return false;
+                }
+            }
+
+            if (d === null) return true;
+
             if (note.includes('五、六停駛')) {
                 return d !== 5 && d !== 6;
             }
             if (note.includes('六、日、例假日停駛')) {
+                return d !== 6 && d !== 7 && !isHoliday;
+            }
+            if (note.includes('六、日停駛')) {
                 return d !== 6 && d !== 7;
             }
-            if (note.includes('六、日、例假日行駛') || note.includes('六、日行駛')) {
+            if (note.includes('六、日、例假日行駛')) {
+                return d === 6 || d === 7 || isHoliday;
+            }
+            if (note.includes('六、日行駛')) {
                 return d === 6 || d === 7;
             }
             if (note.includes('五、六、日、一行駛')) {
@@ -1156,6 +1301,9 @@
             }
             if (note.includes('週四行駛')) {
                 return d === 2;
+            }
+            if (note.includes('週五行駛')) {
+                return d === 5;
             }
             if (note.includes('週日行駛')) {
                 return d === 7;
@@ -1192,7 +1340,14 @@
                         isOvernightRun = true;
                     }
 
-                    if (idx > 0 && depMin < prevDepMin - 180) {
+                    // 依據使用者指定之各頁宿前末班與隔日首班分界修訂
+                    if (page === 18) {
+                        currentDayOffset = (idx >= 3) ? 2 : 1; // 宿前末班 1048便(idx 2)，隔日首班 1138便(idx 3)
+                    } else if (page === 51) {
+                        currentDayOffset = 1; // 第51頁無過夜
+                    } else if (page === 53) {
+                        currentDayOffset = (idx >= 1) ? 2 : 1; // 宿前末班 653(idx 0)，隔日首班 554(idx 1)
+                    } else if (idx > 0 && depMin < prevDepMin - 180) {
                         currentDayOffset += 1;
                     }
                     prevDepMin = depMin;
@@ -1234,10 +1389,40 @@
                 const group = baseTrainMap[run.baseNo];
                 run.isMultiSegment = group.length > 1;
             });
+
+            // 標記每一頁「當日最後過夜前的車次」與「隔日首班發車的車次」
+            // 第 4、16、34 頁：刪除隔日首班之標注；第 51 頁：無過夜
+            const NO_OVERNIGHT_FIRST_PAGES = new Set([4, 16, 34]);
+            const NO_OVERNIGHT_PAGES = new Set([51]);
+            pageOvernightInfo = {};
+            for (let page = 1; page <= 53; page++) {
+                if (NO_OVERNIGHT_PAGES.has(page)) {
+                    pageOvernightInfo[page] = [];
+                    continue;
+                }
+                const pageRuns = allRuns.filter(r => r.page === page);
+                const maxDay = pageRuns.length ? pageRuns[pageRuns.length - 1].dayInShift : 1;
+                const bounds = [];
+                for (let d = 1; d < maxDay; d++) {
+                    const todayRuns = pageRuns.filter(r => r.dayInShift === d);
+                    const nextRuns = pageRuns.filter(r => r.dayInShift === d + 1);
+                    if (!todayRuns.length || !nextRuns.length) continue;
+                    const last = todayRuns[todayRuns.length - 1];
+                    const first = nextRuns[0];
+                    last.overnightLast = true;
+                    if (!NO_OVERNIGHT_FIRST_PAGES.has(page)) {
+                        first.overnightFirst = true;
+                        bounds.push({ last, first });
+                    } else {
+                        bounds.push({ last, first: null });
+                    }
+                }
+                pageOvernightInfo[page] = bounds;
+            }
         }
 
         // ============================================================================
-        // 3. 篩選器邏輯與下拉選單初始化
+        // 3. 篩選器邏輯與下拉選單初始化（含年/月/日與台灣例假日識別）
         // ============================================================================
         function populateSelectOptions() {
             const fromStationSet = new Set();
@@ -1269,8 +1454,193 @@
                 const firstRun = RAW_SCHEDULE_PAGES[p][0];
                 const opt = document.createElement('option');
                 opt.value = p;
-                opt.textContent = `第 ${p} 頁 (${firstRun[0]} ${firstRun[2]}→${firstRun[4]}...)`;
+                opt.textContent = `第 ${p} 頁 (${firstRun[0]} ${firstRun[2]}→${firstRun[4]}...) ｜${getPageOvernightLabel(p)}`;
                 pageSelect.appendChild(opt);
+            }
+
+            // 初始化年、月、日選單
+            const yearSelect = document.getElementById('year-filter');
+            for (let y = 2025; y <= 2028; y++) {
+                const opt = document.createElement('option');
+                opt.value = String(y);
+                opt.textContent = `${y}年`;
+                yearSelect.appendChild(opt);
+            }
+
+            const monthSelect = document.getElementById('month-filter');
+            for (let m = 1; m <= 12; m++) {
+                const opt = document.createElement('option');
+                opt.value = String(m);
+                opt.textContent = `${m}月`;
+                monthSelect.appendChild(opt);
+            }
+
+            updateDateOptions();
+        }
+
+        function updateDateOptions() {
+            const yearVal = document.getElementById('year-filter').value;
+            const monthVal = document.getElementById('month-filter').value;
+            const dateSelect = document.getElementById('date-filter');
+            const prevDate = dateSelect.value;
+
+            let maxDays = 31;
+            if (monthVal !== 'ALL') {
+                const y = yearVal !== 'ALL' ? parseInt(yearVal, 10) : new Date().getFullYear();
+                const m = parseInt(monthVal, 10);
+                maxDays = new Date(y, m, 0).getDate();
+            }
+
+            dateSelect.innerHTML = '<option value="ALL">不限日</option>';
+            for (let d = 1; d <= maxDays; d++) {
+                const opt = document.createElement('option');
+                opt.value = String(d);
+                const hName = (yearVal !== 'ALL' && monthVal !== 'ALL') ? getTaiwanHolidayName(yearVal, monthVal, d) : null;
+                opt.textContent = hName ? `${d}日 (🎌${hName})` : `${d}日`;
+                dateSelect.appendChild(opt);
+            }
+
+            if (prevDate !== 'ALL' && parseInt(prevDate, 10) <= maxDays) {
+                dateSelect.value = prevDate;
+            } else {
+                dateSelect.value = 'ALL';
+            }
+        }
+
+        function handleYMDChange(changedPart) {
+            const yearEl = document.getElementById('year-filter');
+            const monthEl = document.getElementById('month-filter');
+            const dateEl = document.getElementById('date-filter');
+
+            // 若使用者選了月或日但尚未選年，自動補上今年
+            if ((changedPart === 'month' || changedPart === 'date') && yearEl.value === 'ALL' && (monthEl.value !== 'ALL' || dateEl.value !== 'ALL')) {
+                yearEl.value = String(new Date().getFullYear());
+            }
+
+            if (changedPart === 'year' || changedPart === 'month') {
+                updateDateOptions();
+            }
+
+            syncYMDToDayFilter();
+            handleFilterChange();
+        }
+
+        function setFilterToToday() {
+            const now = new Date();
+            document.getElementById('year-filter').value = String(now.getFullYear());
+            document.getElementById('month-filter').value = String(now.getMonth() + 1);
+            updateDateOptions();
+            document.getElementById('date-filter').value = String(now.getDate());
+            syncYMDToDayFilter();
+            handleFilterChange();
+        }
+
+        function handleDaySelectManualChange() {
+            // 若手動改星期選單，清除具體「日」鎖定但保留彈性
+            const yearEl = document.getElementById('year-filter');
+            const monthEl = document.getElementById('month-filter');
+            const dateEl = document.getElementById('date-filter');
+            if (yearEl.value !== 'ALL' && monthEl.value !== 'ALL' && dateEl.value !== 'ALL') {
+                dateEl.value = 'ALL';
+            }
+            updateHolidayStatusBanner();
+            handleFilterChange();
+        }
+
+        function getSelectedDateMetadata() {
+            const y = document.getElementById('year-filter').value;
+            const m = document.getElementById('month-filter').value;
+            const d = document.getElementById('date-filter').value;
+
+            if (y === 'ALL' || m === 'ALL' || d === 'ALL') {
+                return null;
+            }
+
+            const dateObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+            const jsDay = dateObj.getDay(); // 0(日) ~ 6(六)
+            const dayNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+            let dayCode = '2';
+            if (jsDay === 0) dayCode = '7';
+            else if (jsDay === 1) dayCode = '1';
+            else if (jsDay >= 2 && jsDay <= 4) dayCode = '2';
+            else if (jsDay === 5) dayCode = '5';
+            else if (jsDay === 6) dayCode = '6';
+
+            const holidayName = getTaiwanHolidayName(y, m, d);
+            const isWeekend = (jsDay === 0 || jsDay === 6);
+            const isHoliday = Boolean(holidayName);
+
+            return {
+                y, m, d,
+                jsDay,
+                dayName: dayNames[jsDay],
+                dayCode,
+                holidayName,
+                isWeekend,
+                isHoliday
+            };
+        }
+
+        function syncYMDToDayFilter() {
+            const meta = getSelectedDateMetadata();
+            const daySelect = document.getElementById('day-filter');
+            if (meta) {
+                daySelect.value = meta.dayCode;
+            }
+            updateHolidayStatusBanner();
+        }
+
+        function updateHolidayStatusBanner() {
+            const bar = document.getElementById('tw-holiday-status-bar');
+            const meta = getSelectedDateMetadata();
+            const dayFilterVal = document.getElementById('day-filter').value;
+
+            if (!meta && dayFilterVal !== 'HOLIDAY') {
+                bar.classList.add('hidden');
+                return;
+            }
+
+            bar.classList.remove('hidden');
+
+            if (meta) {
+                const dateStr = `${meta.y}/${String(meta.m).padStart(2, '0')}/${String(meta.d).padStart(2, '0')} (${meta.dayName})`;
+                if (meta.isHoliday) {
+                    bar.className = 'px-3 py-1.5 rounded-xl text-xs font-medium flex flex-wrap items-center justify-between gap-2 border bg-rose-950/60 border-rose-500/50 text-rose-200';
+                    bar.innerHTML = `
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 rounded-md bg-rose-600 text-white font-bold text-[11px]">🎌 台灣例假日 / 國定假日</span>
+                            <span class="font-mono font-bold text-white">${dateStr}</span>
+                            <span class="text-amber-300 font-bold">【${meta.holidayName}】</span>
+                        </div>
+                        <span class="text-[11px] text-rose-200/90">已自動套用「例假日行駛/停駛」與${meta.dayName}班表規則</span>
+                    `;
+                } else if (meta.isWeekend) {
+                    bar.className = 'px-3 py-1.5 rounded-xl text-xs font-medium flex flex-wrap items-center justify-between gap-2 border bg-amber-950/50 border-amber-500/40 text-amber-200';
+                    bar.innerHTML = `
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 rounded-md bg-amber-600 text-white font-bold text-[11px]">🏖️ 週末例假</span>
+                            <span class="font-mono font-bold text-white">${dateStr}</span>
+                        </div>
+                        <span class="text-[11px] text-amber-200/90">已自動套用${meta.dayName}（六、日、例假日）行駛規則</span>
+                    `;
+                } else {
+                    bar.className = 'px-3 py-1.5 rounded-xl text-xs font-medium flex flex-wrap items-center justify-between gap-2 border bg-sky-950/50 border-sky-500/40 text-sky-200';
+                    bar.innerHTML = `
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 rounded-md bg-sky-600 text-white font-bold text-[11px]">💼 平日上班日</span>
+                            <span class="font-mono font-bold text-white">${dateStr}</span>
+                        </div>
+                        <span class="text-[11px] text-sky-200/90">非台灣國定例假日 • 已自動套用${meta.dayName}行駛規則</span>
+                    `;
+                }
+            } else if (dayFilterVal === 'HOLIDAY') {
+                bar.className = 'px-3 py-1.5 rounded-xl text-xs font-medium flex flex-wrap items-center justify-between gap-2 border bg-rose-950/60 border-rose-500/50 text-rose-200';
+                bar.innerHTML = `
+                    <div class="flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 rounded-md bg-rose-600 text-white font-bold text-[11px]">🎌 台灣例假日模式</span>
+                        <span>目前篩選所有於「台灣例假日 / 國定假日」行駛之班次（已排除例假日停駛車次）</span>
+                    </div>
+                `;
             }
         }
 
@@ -1282,9 +1652,15 @@
             const category = document.getElementById('category-filter').value;
             const day = document.getElementById('day-filter').value;
             const type = document.getElementById('type-filter').value;
+            const yearVal = document.getElementById('year-filter').value;
+            const monthVal = document.getElementById('month-filter').value;
+            const dateVal = document.getElementById('date-filter').value;
+
+            const dateMeta = getSelectedDateMetadata();
+            const isHolidayFlag = dateMeta ? dateMeta.isHoliday : (day === 'HOLIDAY');
 
             document.getElementById('clear-search-btn').classList.toggle('hidden', !query);
-            const hasAnyFilter = query !== '' || fromStation !== 'ALL' || toStation !== 'ALL' || page !== 'ALL' || category !== 'ALL' || day !== 'ALL' || type !== 'ALL' || selectedMapStation !== null;
+            const hasAnyFilter = query !== '' || fromStation !== 'ALL' || toStation !== 'ALL' || page !== 'ALL' || category !== 'ALL' || day !== 'ALL' || type !== 'ALL' || yearVal !== 'ALL' || monthVal !== 'ALL' || dateVal !== 'ALL' || selectedMapStation !== null;
             document.getElementById('reset-filter-btn').classList.toggle('hidden', !hasAnyFilter);
 
             return allRuns.filter(r => {
@@ -1292,7 +1668,6 @@
                 if (fromStation !== 'ALL' && r.fromStation !== fromStation) return false;
                 if (toStation !== 'ALL' && r.toStation !== toStation) return false;
                 if (selectedMapStation) {
-                    // 若在地圖點選了「北湖」，也一併顯示經過北湖往返富岡基地或新富/湖口的相關車次
                     if (selectedMapStation === '北湖') {
                         const wpNames = getRouteWaypoints(r.fromStation, r.toStation, r.trainNo).map(w => w.name);
                         if (!wpNames.includes('北湖')) return false;
@@ -1301,7 +1676,7 @@
                     }
                 }
                 if (category !== 'ALL' && r.trainCategory !== category) return false;
-                if (!runsOnDay(r.note, day)) return false;
+                if (!runsOnDay(r.note, day, isHolidayFlag)) return false;
 
                 if (type === 'DUTY' && r.isDeadhead) return false;
                 if (type === 'DEADHEAD' && !r.isDeadhead) return false;
@@ -1336,6 +1711,11 @@
             document.getElementById('category-filter').value = 'ALL';
             document.getElementById('day-filter').value = 'ALL';
             document.getElementById('type-filter').value = 'ALL';
+            document.getElementById('year-filter').value = 'ALL';
+            document.getElementById('month-filter').value = 'ALL';
+            updateDateOptions();
+            document.getElementById('date-filter').value = 'ALL';
+            updateHolidayStatusBanner();
             selectedMapStation = null;
             updateSelectedStationUI();
             renderIslandMapBase();
@@ -1391,7 +1771,7 @@
                     banner.innerHTML = `
                         <div class="flex items-center gap-1.5 text-rose-300 font-bold shrink-0">
                             <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                            <span>時間軸 [${activeTimeStr}] 壓線車次 (${seenKeys.size} 班)：</span>
+                            <span>時間軸 [${activeTimeStr}] 乘務中車次 (${seenKeys.size} 班)：</span>
                         </div>
                         <div class="flex flex-wrap items-center gap-1.5">${chipsHtml}</div>
                     `;
@@ -1399,7 +1779,7 @@
                     banner.innerHTML = `
                         <div class="flex items-center gap-2 text-slate-400">
                             <i class="fa-regular fa-clock text-rose-400"></i>
-                            <span>時間軸 <strong>${activeTimeStr}</strong> 目前無車次壓線（可點擊上方時間欄位或直接點時間軸刻度尺測試其他時段）</span>
+                            <span>時間軸 <strong>${activeTimeStr}</strong> 目前無乘務中車次（可點擊上方時間欄位或直接點時間軸刻度尺測試其他時段）</span>
                         </div>
                     `;
                 }
@@ -1408,14 +1788,14 @@
             const runs = onlyActiveTimeline ? touchingRuns : baseFilteredRuns;
 
             const uniquePages = new Set(runs.map(r => r.page)).size;
-            document.getElementById('stats-counter').textContent = `顯示 ${runs.length} 筆車次區間（涵蓋 ${uniquePages} 頁班表，壓線 ${touchingRuns.length} 筆）`;
+            document.getElementById('stats-counter').textContent = `顯示 ${runs.length} 筆車次區間（涵蓋 ${uniquePages} 頁班表，乘務中 ${touchingRuns.length} 筆）`;
 
             if (runs.length === 0) {
                 canvas.innerHTML = `
                     <div class="p-12 text-center text-slate-400">
                         <i class="fa-solid fa-train-tram text-4xl mb-3 text-slate-600"></i>
-                        <p class="text-base font-medium text-slate-300">${onlyActiveTimeline ? `時間軸 ${activeTimeStr} 沒有壓線的車次` : '找不到符合篩選條件的車次'}</p>
-                        <p class="text-xs mt-1">請嘗試調整起訖車站、車種篩選、時間軸時刻或取消勾選「只顯示壓到時間軸的車次」</p>
+                        <p class="text-base font-medium text-slate-300">${onlyActiveTimeline ? `時間軸 ${activeTimeStr} 沒有乘務中的車次` : '找不到符合篩選條件的車次'}</p>
+                        <p class="text-xs mt-1">請嘗試調整起訖車站、車種篩選、時間軸時刻或取消勾選「只顯示壓到時間軸（乘務中）的車次」</p>
                     </div>`;
                 return;
             }
@@ -1559,15 +1939,31 @@
                         if (isTouching) rowTouchesTimeline = true;
 
                         const activeBorderClass = isTouching ? 'active-timeline-bar' : '';
+
+                        // 過夜分界標注：宿前末班(🌙) / 隔日首班(☀️)
+                        const { lastPages, firstPages } = getOvernightMarks(seg.rawItems);
+                        let overnightOutlineClass = '';
+                        if (lastPages.length && firstPages.length) overnightOutlineClass = 'outline outline-2 outline-offset-1 outline-fuchsia-300';
+                        else if (lastPages.length) overnightOutlineClass = 'outline outline-2 outline-offset-1 outline-indigo-300';
+                        else if (firstPages.length) overnightOutlineClass = 'outline outline-2 outline-offset-1 outline-yellow-300';
+                        const fmtPages = (list) => 'P.' + list.join('/');
+                        let overnightBadgeHtml = '';
+                        if (lastPages.length || firstPages.length) {
+                            overnightBadgeHtml = `<div class="absolute -bottom-2.5 right-1 z-30 flex items-center gap-1 pointer-events-none">
+                                ${lastPages.length ? `<span class="px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[9px] leading-none font-bold shadow border border-indigo-200 whitespace-nowrap">🌙 ${fmtPages(lastPages)} 宿前末班</span>` : ''}
+                                ${firstPages.length ? `<span class="px-1.5 py-0.5 rounded-full bg-yellow-400 text-slate-900 text-[9px] leading-none font-bold shadow border border-yellow-100 whitespace-nowrap">☀️ ${fmtPages(firstPages)} 隔日首班</span>` : ''}
+                            </div>`;
+                        }
                         const activeBadgeHtml = isTouching
-                            ? `<span class="absolute -top-2 -left-1.5 z-30 px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-bold shadow border border-white flex items-center gap-0.5">🔴壓線</span>`
+                            ? `<span class="absolute -top-2 -left-1.5 z-30 px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-bold shadow border border-white flex items-center gap-0.5">🔴乘務中</span>`
                             : '';
 
                         barsHtml += `
                             <div onclick="openTrainModal(${seg.id})"
                                 style="left: ${leftPx}px; width: ${widthPx}px; top: ${topPx}px; height: ${laneHeight - 6}px;"
-                                class="absolute rounded-lg border px-2 py-0.5 cursor-pointer transition-transform hover:scale-[1.02] hover:z-20 active:scale-95 shadow-md flex flex-col justify-center overflow-visible ${colorClass} ${activeBorderClass}">
+                                class="absolute rounded-lg border px-2 py-0.5 cursor-pointer transition-transform hover:scale-[1.02] hover:z-20 active:scale-95 shadow-md flex flex-col justify-center overflow-visible ${colorClass} ${activeBorderClass} ${overnightOutlineClass}">
                                 ${activeBadgeHtml}
+                                ${overnightBadgeHtml}
                                 <div class="flex items-center justify-between gap-1 leading-tight whitespace-nowrap overflow-hidden">
                                     <span class="font-bold text-[11px] sm:text-xs drop-shadow-sm">${seg.fromStation}→${seg.toStation}</span>
                                     <span class="text-[10px] font-mono bg-black/30 px-1 rounded text-white/95">${pagesText}</span>
@@ -1637,19 +2033,15 @@
             let prefix = [];
             let suffix = [];
 
-            // 1. 基隆支線 (由七堵分岔)
             if (start === "基隆") { prefix.push("基隆"); start = "七堵"; }
             if (end === "基隆")   { suffix.push("基隆"); end = "七堵"; }
 
-            // 2. 蘇澳支線 (由二結分岔)
             if (start === "蘇澳") { prefix.push("蘇澳"); start = "二結"; }
             if (end === "蘇澳")   { suffix.push("蘇澳"); end = "二結"; }
 
-            // 3. 樹調支線 (由樹林分岔)
             if (start === "樹調") { prefix.push("樹調"); start = "樹林"; }
             if (end === "樹調")   { suffix.push("樹調"); end = "樹林"; }
 
-            // 4. 富岡基地支線 (由北湖分岔)
             if (start === "富岡基地") { prefix.push("富岡基地"); start = "北湖"; }
             if (end === "富岡基地")   { suffix.push("富岡基地"); end = "北湖"; }
 
@@ -1667,7 +2059,6 @@
                 mainSlice = start === end ? [start] : [start, end];
             }
 
-            // 5. 179次 專屬海線判斷：竹南 ➔ 海線 ➔ 彰化 (不經苗栗山線)
             if (trainNo === "179") {
                 const mIdx = mainSlice.indexOf("苗栗");
                 if (mIdx !== -1 && mainSlice.includes("竹南") && mainSlice.includes("彰化")) {
@@ -1699,31 +2090,22 @@
             const southLinkPath = `M ${STATION_NODES["潮州"].x} ${STATION_NODES["潮州"].y} Q 450 885 ${STATION_NODES["台東"].x} ${STATION_NODES["台東"].y}`;
 
             tracksLayer.innerHTML = `
-                <!-- 南迴線意象虛線 -->
                 <path d="${southLinkPath}" fill="none" stroke="#334155" stroke-width="4" stroke-dasharray="8 8" stroke-linecap="round" />
-
-                <!-- 海線 (竹南 ➔ 彰化) 軌道底層與示意線 -->
                 <polyline points="${coastLinePoints}" fill="none" stroke="#0f172a" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" />
                 <polyline points="${coastLinePoints}" fill="none" stroke="#0891b2" stroke-width="4" stroke-dasharray="6 4" stroke-linejoin="round" stroke-linecap="round" />
                 <g transform="translate(${COAST_LINE_WAYPOINT.x - 10}, ${COAST_LINE_WAYPOINT.y})">
                     <rect x="-34" y="-10" width="38" height="19" rx="4" fill="#083344" stroke="#06b6d4" stroke-width="1" opacity="0.9" />
                     <text x="-15" y="3" text-anchor="middle" fill="#67e8f9" style="font-size: 10.5px; font-weight: 700;">海線</text>
                 </g>
-                <!-- 山線文字輔助標示 -->
                 <text x="${STATION_NODES["苗栗"].x - 12}" y="${STATION_NODES["苗栗"].y + 4}" text-anchor="end" fill="#64748b" style="font-size: 10px; font-weight: 600;">(山線)</text>
-
-                <!-- 主幹線與各支線底層深色路基 -->
                 <polyline points="${mainPoints}" fill="none" stroke="#0f172a" stroke-width="11" stroke-linejoin="round" stroke-linecap="round" />
                 <polyline points="${keelungBranch}" fill="none" stroke="#0f172a" stroke-width="10" stroke-linecap="round" />
                 <polyline points="${suaoBranch}" fill="none" stroke="#0f172a" stroke-width="10" stroke-linecap="round" />
                 <polyline points="${shudiaoBranch}" fill="none" stroke="#0f172a" stroke-width="9" stroke-linecap="round" />
                 <polyline points="${fugangBranch}" fill="none" stroke="#0f172a" stroke-width="9" stroke-linecap="round" />
-
-                <!-- 主幹線與各支線軌道 -->
                 <polyline points="${mainPoints}" fill="none" stroke="#334155" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round" />
                 <polyline points="${keelungBranch}" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round" />
                 <polyline points="${suaoBranch}" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round" />
-                <!-- 樹調支線 (樹林分出) 與 富岡基地支線 (北湖分出) -->
                 <polyline points="${shudiaoBranch}" fill="none" stroke="#64748b" stroke-width="4.5" stroke-linecap="round" />
                 <polyline points="${fugangBranch}" fill="none" stroke="#64748b" stroke-width="4.5" stroke-linecap="round" />
             `;
@@ -1990,10 +2372,10 @@
             });
 
             const uniquePages = new Set(filteredRuns.map(r => r.page)).size;
-            document.getElementById('stats-counter').textContent = `環島雷達 [${timeStr}]：目前 ${activeRuns.length} 班列車壓線行駛中（符合篩選共 ${filteredRuns.length} 筆 / ${uniquePages} 頁）`;
+            document.getElementById('stats-counter').textContent = `環島雷達 [${timeStr}]：目前 ${activeRuns.length} 班列車乘務中（符合篩選共 ${filteredRuns.length} 筆 / ${uniquePages} 頁）`;
 
             const badgeEl = document.getElementById('map-active-count-badge');
-            if (badgeEl) badgeEl.textContent = `${activeRuns.length} 班行駛中`;
+            if (badgeEl) badgeEl.textContent = `${activeRuns.length} 班乘務中`;
 
             let routesSvg = '';
             let trainsSvg = '';
@@ -2065,7 +2447,7 @@
                 listContainer.innerHTML = `
                     <div class="p-8 text-center text-slate-400 bg-slate-950/50 rounded-xl border border-slate-800/80">
                         <i class="fa-solid fa-train-subway text-2xl mb-2 text-slate-600"></i>
-                        <p class="text-xs sm:text-sm font-medium text-slate-300">${timeStr} 目前無符合條件的在線列車</p>
+                        <p class="text-xs sm:text-sm font-medium text-slate-300">${timeStr} 目前無符合條件的乘務中列車</p>
                         <p class="text-[11px] text-slate-500 mt-1">請試著拖曳上方時間軸滑桿至尖峰時段（如 07:30 或 16:30）</p>
                     </div>
                 `;
@@ -2093,7 +2475,7 @@
                         <div class="flex items-center justify-between text-[11px] text-slate-300">
                             <span class="text-rose-300 font-medium flex items-center gap-1">
                                 <i class="fa-solid fa-location-dot text-rose-500"></i>
-                                區間估算：${pos.currentSegment} (${pct}%)
+                                乘務中區間：${pos.currentSegment} (${pct}%)
                             </span>
                             <span class="font-mono text-slate-400">${run.depTime} - ${run.arrTime}</span>
                         </div>
@@ -2127,7 +2509,7 @@
                 }
 
                 html += `
-                    <button onclick="selectSinglePage(${p})" class="shrink-0 px-3 py-1.5 rounded-xl border text-xs font-mono transition flex items-center gap-1 ${btnClass}">
+                    <button onclick="selectSinglePage(${p})" title="第 ${p} 頁｜${getPageOvernightLabel(p)}" class="shrink-0 px-3 py-1.5 rounded-xl border text-xs font-mono transition flex items-center gap-1 ${btnClass}">
                         ${isPinned ? '<i class="fa-solid fa-thumbtack text-amber-400 text-[10px]"></i>' : ''}
                         <span>P.${p}</span>
                     </button>
@@ -2215,6 +2597,8 @@
                                     <div class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400">
                                         <span>行車 ${formatDuration(run.durationMin)}</span>
                                         ${run.isMultiSegment ? `<span class="text-emerald-400 font-medium"><i class="fa-solid fa-clone mr-0.5"></i>重複車次</span>` : ''}
+                                        ${run.overnightLast ? `<span class="px-1.5 py-0.5 rounded bg-indigo-500/25 text-indigo-200 border border-indigo-400/50 font-medium">🌙 宿前末班</span>` : ''}
+                                        ${run.overnightFirst ? `<span class="px-1.5 py-0.5 rounded bg-yellow-400/25 text-yellow-200 border border-yellow-300/50 font-medium">☀️ 隔日首班</span>` : ''}
                                         ${run.note ? `<span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">${run.note}</span>` : ''}
                                     </div>
                                 </div>
@@ -2235,6 +2619,7 @@
                                     <div>
                                         <h3 class="font-bold text-base text-white flex items-center gap-2">
                                             <span>第 ${pageNo} 頁班表</span>
+                                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">${getPageOvernightLabel(pageNo)}</span>
                                             ${isPinned ? '<span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">已釘選</span>' : ''}
                                         </h3>
                                         <p class="text-xs text-slate-400 font-mono">
@@ -2376,6 +2761,8 @@
                         <span class="font-mono text-[11px] text-slate-400">D${pr.dayInShift}</span>
                         <span class="font-mono font-bold text-sky-300 w-16">${pr.trainNo}</span>
                         <span>${pr.fromStation} ${pr.depTime} → ${pr.toStation} ${pr.arrTime}</span>
+                        ${pr.overnightLast ? '<span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[9px]">🌙宿前末班</span>' : ''}
+                        ${pr.overnightFirst ? '<span class="px-1.5 py-0.5 rounded bg-yellow-400 text-slate-900 text-[9px] font-bold">☀️隔日首班</span>' : ''}
                     </div>
                     <span class="text-[10px] text-slate-400">${pr.note}</span>
                 </div>
@@ -2414,6 +2801,7 @@
                 <div class="space-y-2">
                     <div class="text-xs font-bold text-slate-300 flex items-center justify-between">
                         <span>📋 第 ${run.page} 頁班表完整順序（共 ${pageRuns.length} 趟）：</span>
+                        <span class="text-[11px] font-mono text-indigo-300">${getPageOvernightLabel(run.page)}</span>
                     </div>
                     <div class="space-y-1.5">
                         ${pageSeqHtml}
@@ -2527,7 +2915,8 @@
             const now = new Date();
             const days = ['日', '一', '二', '三', '四', '五', '六'];
             const timeStr = now.toTimeString().split(' ')[0];
-            document.getElementById('live-clock').textContent = `週${days[now.getDay()]} ${timeStr}`;
+            const holidayToday = getTaiwanHolidayName(now.getFullYear(), now.getMonth() + 1, now.getDate());
+            document.getElementById('live-clock').textContent = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} 週${days[now.getDay()]}${holidayToday ? ` (🎌${holidayToday})` : ''} ${timeStr}`;
 
             const currentMin = now.getHours() * 60 + now.getMinutes();
             if (!isCustomTimeline && currentMin !== lastAutoRenderedMinute) {
