@@ -120,10 +120,14 @@
 
             <!-- 視角切換與主題按鈕 -->
             <div class="flex items-center gap-1.5 sm:gap-2 ml-auto">
-                <div class="bg-slate-800 p-1 rounded-xl flex items-center border border-slate-700/70">
+                <div class="bg-slate-800 p-1 rounded-xl flex flex-wrap items-center border border-slate-700/70">
                     <button id="tab-gantt" onclick="switchView('gantt')" class="px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 bg-sky-600 text-white shadow">
                         <i class="fa-solid fa-chart-gantt"></i>
                         <span>時間軸圖</span>
+                    </button>
+                    <button id="tab-map" onclick="switchView('map')" class="px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 text-slate-300 hover:text-white">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        <span>環島雷達</span>
                     </button>
                     <button id="tab-pages" onclick="switchView('pages')" class="px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 text-slate-300 hover:text-white">
                         <i class="fa-solid fa-book-open"></i>
@@ -176,7 +180,7 @@
 
             <!-- 第二排：車種選單（對號/區間/觀光）、勤務性質選單、星期選單（含底部校閱提示文字） -->
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start">
-                <!-- 新增：車種類別篩選 (對號車3碼 / 區間快4碼 / 觀光專列) -->
+                <!-- 車種類別篩選 (對號車3碼 / 區間快4碼 / 觀光專列) -->
                 <div class="sm:col-span-4">
                     <select id="category-filter" onchange="handleFilterChange()" class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-sky-500">
                         <option value="ALL">🚄 全部車種 (對號 / 區間 / 觀光專列)</option>
@@ -308,6 +312,143 @@
             </div>
         </div>
 
+        <!-- ==================== 視角 1.5：環島鐵路動態雷達地圖 (SVG 26站拓撲 + 支線/海線示意 + 拖曳時間軸) ==================== -->
+        <div id="view-map" class="hidden flex-1 flex flex-col space-y-4">
+            <!-- 環島地圖：24小時拖曳時間軸控制列 -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-lg space-y-2.5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <!-- 左側：目前雷達時間與狀態 -->
+                    <div class="flex items-center gap-2.5">
+                        <span class="px-3 py-1 rounded-xl bg-rose-600 text-white font-mono font-bold text-sm sm:text-base shadow-md shadow-rose-600/30 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                            <span id="map-timeline-clock">08:00</span>
+                        </span>
+                        <div>
+                            <div class="text-xs sm:text-sm font-bold text-white flex flex-wrap items-center gap-1.5">
+                                <span>環島列車動態雷達</span>
+                                <span id="map-active-count-badge" class="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[11px] font-mono">0 班行駛中</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">左右拖曳滑桿或點擊自動播放，即時預覽全島線上值乘與便乘列車位置</p>
+                        </div>
+                    </div>
+
+                    <!-- 右側：縮時播放、微調與回到現在時刻按鈕 -->
+                    <div class="flex flex-wrap items-center gap-1.5 ml-auto">
+                        <button onclick="stepTimelineMinutes(-5)" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-slate-300" title="倒退 5 分鐘">-5m</button>
+                        <button onclick="stepTimelineMinutes(-1)" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-slate-300" title="倒退 1 分鐘">-1m</button>
+                        
+                        <button onclick="toggleTimelinePlayback()" id="btn-map-play" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center gap-1.5 shadow">
+                            <i class="fa-solid fa-play" id="icon-map-play"></i>
+                            <span id="text-map-play">自動播放</span>
+                        </button>
+
+                        <button onclick="stepTimelineMinutes(1)" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-slate-300" title="前進 1 分鐘">+1m</button>
+                        <button onclick="stepTimelineMinutes(5)" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-slate-300" title="前進 5 分鐘">+5m</button>
+                        
+                        <button onclick="resetToRealTime()" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-medium transition">
+                            現在時刻
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 00:00 ~ 23:59 無段式拖曳滑桿 -->
+                <div class="relative pt-1">
+                    <input type="range" id="map-timeline-slider" min="0" max="1439" step="0.5" value="480"
+                        oninput="handleTimelineSliderDrag(this.value)"
+                        class="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-500 focus:outline-none">
+                    <!-- 24小時刻度提示 -->
+                    <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1 px-0.5 select-none">
+                        <span>00:00</span>
+                        <span>04:00</span>
+                        <span>08:00</span>
+                        <span>12:00</span>
+                        <span>16:00</span>
+                        <span>20:00</span>
+                        <span>23:59</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 環島地圖主體與右側在線列車清單 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                <!-- 左側/中央：SVG 環島鐵路拓撲地圖畫布 -->
+                <div class="lg:col-span-7 xl:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-5 shadow-xl relative overflow-hidden flex flex-col items-center">
+                    <div class="w-full flex flex-wrap items-center justify-between gap-2 mb-2 z-10">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-bold flex items-center gap-1.5">
+                                <i class="fa-solid fa-route"></i> 環島鐵路拓撲定位圖 (全26站 • 含支線/海線)
+                            </span>
+                            <span id="selected-station-chip" class="hidden px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-medium flex items-center gap-1.5">
+                                <span id="selected-station-chip-text">已選車站</span>
+                                <button onclick="clearStationSelection()" class="hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                            </span>
+                        </div>
+                        <!-- 圖例 -->
+                        <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-amber-400 border-2 border-white inline-block"></span>樹林本段</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-100 border-2 border-sky-400 inline-block"></span>主要大站</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-purple-400 border border-white inline-block"></span>基地/調車場支線</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-1 bg-cyan-400 rounded inline-block"></span>海線(179次)</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 border border-white inline-block"></span>壓線行駛列車</span>
+                        </div>
+                    </div>
+
+                    <!-- SVG 主畫布 -->
+                    <div class="w-full flex justify-center items-center bg-slate-950/70 rounded-xl border border-slate-800/80 p-2">
+                        <svg id="island-rail-map" viewBox="0 0 800 920" class="w-full max-w-[620px] h-auto select-none">
+                            <defs>
+                                <!-- 樹林核心站靜態柔和光暈漸層 (移除會導致 iOS Safari 閃爍的 SVG Filter 與縮放動畫) -->
+                                <radialGradient id="shulin-halo" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.55" />
+                                    <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+                                </radialGradient>
+                            </defs>
+
+                            <!-- Layer 1: 背景裝飾格線與中央台灣山脈意象 -->
+                            <g id="map-layer-bg" class="opacity-25 pointer-events-none">
+                                <ellipse cx="395" cy="495" rx="165" ry="260" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="6 6" />
+                                <text x="395" y="485" text-anchor="middle" fill="#334155" class="text-sm font-bold tracking-widest">TAIWAN RAILWAY</text>
+                                <text x="395" y="510" text-anchor="middle" fill="#1e293b" class="text-xs font-mono">CONDUCTOR RADAR MAP</text>
+                            </g>
+
+                            <!-- Layer 2: 靜態基礎鐵道路網層 -->
+                            <g id="map-layer-base-tracks"></g>
+
+                            <!-- Layer 3: 動態高亮路線層 (已行駛實線 + 待行駛虛線) -->
+                            <g id="map-layer-active-routes"></g>
+
+                            <!-- Layer 4: 26 個車站節點與站名標籤層 -->
+                            <g id="map-layer-stations"></g>
+
+                            <!-- Layer 5: 動態壓線列車位置與膠囊層 -->
+                            <g id="map-layer-live-trains"></g>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- 右側：在線列車即時動態清單與車站快篩面板 -->
+                <div class="lg:col-span-5 xl:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col space-y-3 max-h-[82vh]">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                        <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+                            <i class="fa-solid fa-satellite-dish text-rose-400"></i>
+                            <span>壓線行駛中列車清單</span>
+                        </h3>
+                        <span class="text-[11px] text-slate-400 font-mono">點擊卡片查看詳情</span>
+                    </div>
+
+                    <!-- 車站點擊提示區 -->
+                    <div id="selected-station-info" class="text-xs text-slate-300 bg-slate-800/70 border border-slate-700/80 rounded-xl p-2.5 leading-relaxed">
+                        💡 <strong>操作小撇步：</strong>拖曳上方滑桿可觀察列車沿鐵路移動；點擊地圖上的<strong>任意車站節點</strong>可高亮該站並快速篩選起訖班次。
+                    </div>
+
+                    <!-- 在線列車動態卡片容器 -->
+                    <div id="map-live-trains-list" class="overflow-y-auto space-y-2.5 pr-1 flex-1">
+                        <!-- 由 JS 即時渲染 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ==================== 視角 2：依班表頁數檢視 (第 1 頁 ~ 第 53 頁) ==================== -->
         <div id="view-pages" class="hidden flex-1 flex flex-col space-y-4">
             <!-- 快速選頁導航器 -->
@@ -402,7 +543,7 @@
     <footer class="border-t border-slate-800/80 py-4 px-4 text-center text-xs text-slate-500 mt-6">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
             <span>🚆 班表統整系統（Beta） • 林O本製作。僅供參考用，不保證資料正確、也不保證更新</span>
-            <span>支援半點時刻 (.5 = 30秒) 精準定位與重複車次統整</span>
+            <span>支援半點時刻 (.5 = 30秒) 精準定位、環島雷達與重複車次統整</span>
         </div>
     </footer>
 
@@ -774,17 +915,96 @@
         const TOURIST_TRAIN_NUMS = new Set(['6652', '6655', '6616', '6615', '1']);
 
         // ============================================================================
+        // 1.5 環島鐵路拓撲座標與 26 個車站節點定義 (對應 SVG viewBox: 800 x 920)
+        // 包含：
+        // - 樹調：從「樹林」分岔出去的支線
+        // - 北湖：位於「新富」與「湖口」之間的主線車站
+        // - 富岡基地：從「北湖」分岔出去的支線
+        // - 海線示意：竹南 ➔ 彰化 (供 179 次行駛)
+        // ============================================================================
+        const STATION_NODES = {
+            // --- 基隆支線 (由七堵分岔往北) ---
+            "基隆":     { x: 470, y: 55,  branch: "keelung", ringIdx: 0.5, role: "terminal", labelPos: "top" },
+
+            // --- 北部核心段 ---
+            "七堵":     { x: 470, y: 115, branch: "main",    ringIdx: 1,   role: "major",    labelPos: "right" },
+            "南港":     { x: 410, y: 115, branch: "main",    ringIdx: 2,   role: "normal",   labelPos: "top" },
+            "松山":     { x: 350, y: 115, branch: "main",    ringIdx: 3,   role: "normal",   labelPos: "bottom" },
+            "台北":     { x: 290, y: 115, branch: "main",    ringIdx: 4,   role: "major",    labelPos: "top" },
+            "板橋":     { x: 235, y: 140, branch: "main",    ringIdx: 5,   role: "major",    labelPos: "top-left" },
+            "樹林":     { x: 195, y: 185, branch: "main",    ringIdx: 6,   role: "hub",      labelPos: "right" },
+
+            // --- 樹調支線 (由樹林分岔出去的支線) ---
+            "樹調":     { x: 120, y: 205, branch: "shudiao", ringIdx: 6.5, role: "depot",    labelPos: "left" },
+
+            // --- 桃竹苗段 (由北往南沿西岸下行) ---
+            "桃園":     { x: 170, y: 255, branch: "main",    ringIdx: 8,   role: "normal",   labelPos: "left" },
+            "中壢":     { x: 160, y: 310, branch: "main",    ringIdx: 9,   role: "normal",   labelPos: "left" },
+            "埔心":     { x: 155, y: 360, branch: "main",    ringIdx: 10,  role: "normal",   labelPos: "left" },
+            "新富":     { x: 155, y: 410, branch: "main",    ringIdx: 11,  role: "depot",    labelPos: "left" },
+            "北湖":     { x: 155, y: 455, branch: "main",    ringIdx: 12,  role: "normal",   labelPos: "right" },
+
+            // --- 富岡基地支線 (由北湖分岔出去的支線) ---
+            "富岡基地": { x: 82,  y: 440, branch: "fugang",  ringIdx: 12.5,role: "depot",    labelPos: "top" },
+
+            "湖口":     { x: 158, y: 500, branch: "main",    ringIdx: 13,  role: "normal",   labelPos: "left" },
+            "新豐":     { x: 162, y: 545, branch: "main",    ringIdx: 14,  role: "normal",   labelPos: "left" },
+            "新竹":     { x: 168, y: 590, branch: "main",    ringIdx: 15,  role: "major",    labelPos: "left" },
+            "竹南":     { x: 175, y: 640, branch: "main",    ringIdx: 16,  role: "major",    labelPos: "right" },
+            "苗栗":     { x: 205, y: 700, branch: "main",    ringIdx: 17,  role: "major",    labelPos: "right" },
+
+            // --- 中南部段 ---
+            "彰化":     { x: 185, y: 765, branch: "main",    ringIdx: 18,  role: "major",    labelPos: "right" },
+            "員林":     { x: 210, y: 815, branch: "main",    ringIdx: 19,  role: "normal",   labelPos: "left" },
+            "潮州":     { x: 310, y: 865, branch: "main",    ringIdx: 20,  role: "terminal", labelPos: "bottom" },
+
+            // --- 東部幹線 / 宜蘭線 / 北迴線 (由七堵往東南順時針下行) ---
+            "瑞芳":     { x: 545, y: 135, branch: "main",    ringIdx: 30,  role: "major",    labelPos: "top-right" },
+            "福隆":     { x: 605, y: 175, branch: "main",    ringIdx: 29,  role: "normal",   labelPos: "right" },
+            "大里":     { x: 635, y: 220, branch: "main",    ringIdx: 28,  role: "normal",   labelPos: "right" },
+            "宜蘭":     { x: 650, y: 275, branch: "main",    ringIdx: 27,  role: "major",    labelPos: "right" },
+            "二結":     { x: 650, y: 325, branch: "main",    ringIdx: 26,  role: "normal",   labelPos: "right" },
+
+            // --- 蘇澳支線 (由二結分岔) ---
+            "蘇澳":     { x: 715, y: 365, branch: "suao",    ringIdx: 25.5,role: "terminal", labelPos: "right" },
+
+            // --- 北迴與花東段 ---
+            "和平":     { x: 640, y: 425, branch: "main",    ringIdx: 25,  role: "normal",   labelPos: "right" },
+            "花蓮":     { x: 620, y: 525, branch: "main",    ringIdx: 24,  role: "major",    labelPos: "right" },
+            "吉安":     { x: 610, y: 575, branch: "main",    ringIdx: 23,  role: "normal",   labelPos: "right" },
+            "台東":     { x: 555, y: 745, branch: "main",    ringIdx: 22,  role: "terminal", labelPos: "right" }
+        };
+
+        // 海線示意虛擬路徑座標點 (從竹南往西繞海側至彰化，供 179 次行駛與繪圖)
+        const COAST_LINE_WAYPOINT = {
+            name: "海線",
+            x: 112,
+            y: 702
+        };
+
+        // 主幹線順時針拓撲順序 (樹調與富岡基地為支線，北湖位於新富與湖口之間)
+        const MAIN_LINE_SEQUENCE = [
+            "潮州", "員林", "彰化", "苗栗", "竹南", "新竹", "新豐", "湖口",
+            "北湖", "新富", "埔心", "中壢", "桃園", "樹林", "板橋",
+            "台北", "松山", "南港", "七堵", "瑞芳", "福隆", "大里", "宜蘭",
+            "二結", "和平", "花蓮", "吉安", "台東"
+        ];
+
+        // ============================================================================
         // 2. 資料解析與正規化處理
         // ============================================================================
         let allRuns = [];
-        let baseTrainMap = {}; // 記錄同一個基礎車次出現的所有班段
+        let baseTrainMap = {};
         let currentView = 'gantt';
-        let hourWidthPx = 70; // 甘特圖每小時像素寬度 (支援縮放)
+        let hourWidthPx = 70;
         let pinnedPage = localStorage.getItem('conductor_pinned_page') ? parseInt(localStorage.getItem('conductor_pinned_page')) : null;
 
-        // 時間軸基準分鐘數
+        // 時間軸基準分鐘數與自動播放計時器
         let isCustomTimeline = false;
         let customTimelineMins = 0;
+        let timelinePlayTimer = null;
+        let selectedMapStation = null;
+        let lastAutoRenderedMinute = -1;
 
         function getActiveTimelineMinutes() {
             if (isCustomTimeline) return customTimelineMins;
@@ -817,7 +1037,7 @@
                 customTimelineMins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
                 isCustomTimeline = true;
                 updateTimelineModeUI();
-                renderGanttView();
+                renderActiveView();
             }
         }
 
@@ -828,20 +1048,35 @@
             customTimelineMins = clickedMins % 1440;
             isCustomTimeline = true;
             updateTimelineModeUI();
-            renderGanttView();
+            renderActiveView();
         }
 
         function resetToRealTime() {
+            if (timelinePlayTimer) {
+                toggleTimelinePlayback();
+            }
             isCustomTimeline = false;
             updateTimelineModeUI();
-            renderGanttView();
-            scrollToCurrentTime();
+            renderActiveView();
+            if (currentView === 'gantt') {
+                scrollToCurrentTime();
+            }
         }
 
         function updateTimelineModeUI() {
             const activeMins = getActiveTimelineMinutes();
+            const timeStr = formatMinsToHHMM(activeMins);
             const inputEl = document.getElementById('custom-timeline-input');
-            if (inputEl) inputEl.value = formatMinsToHHMM(activeMins);
+            if (inputEl) inputEl.value = timeStr;
+
+            const clockEl = document.getElementById('map-timeline-clock');
+            if (clockEl) clockEl.textContent = timeStr;
+
+            const sliderEl = document.getElementById('map-timeline-slider');
+            if (sliderEl && document.activeElement !== sliderEl) {
+                sliderEl.value = activeMins;
+            }
+
             const btnReal = document.getElementById('btn-realtime-mode');
             if (btnReal) {
                 if (isCustomTimeline) {
@@ -854,7 +1089,6 @@
             }
         }
 
-        // 解析時間字串 (例如 "17:55.5" -> 17*60 + 55.5 = 1075.5 分鐘)
         function parseTimeToMinutes(timeStr) {
             const parts = timeStr.trim().split(':');
             const hours = parseInt(parts[0], 10);
@@ -862,24 +1096,20 @@
             return hours * 60 + mins;
         }
 
-        // 取出基礎車次編號 (例如 "4193便" -> "4193", "6652(回送)" -> "6652", "1128B" -> "1128B")
         function extractBaseTrainNo(trainStr) {
             return trainStr.replace(/便|\(回送\)/g, '').trim();
         }
 
-        // 取出車次前方純數字字串 (例如 "1008A" -> "1008", "6652(回送)" -> "6652", "1B" -> "1")
         function extractLeadingDigitsStr(trainStr) {
             const match = trainStr.match(/^\d+/);
             return match ? match[0] : '';
         }
 
-        // 取出純數字供排序使用
         function extractNumericTrainNo(trainStr) {
             const match = trainStr.match(/\d+/);
             return match ? parseInt(match[0], 10) : 99999;
         }
 
-        // 判斷車種分類：觀光/專列 (TOURIST)、對號車3碼 (RESERVED)、區間(快)4碼 (LOCAL)
         function classifyTrainCategory(trainStr) {
             const digitsStr = extractLeadingDigitsStr(trainStr);
             if (TOURIST_TRAIN_NUMS.has(digitsStr)) {
@@ -894,7 +1124,6 @@
             return 'OTHER';
         }
 
-        // 判斷該車次在指定星期是否行駛 (1:週一, 2:週二~四, 5:週五, 6:週六, 7:週日)
         function runsOnDay(note, dayCode) {
             if (!note || dayCode === 'ALL') return true;
             const d = parseInt(dayCode, 10);
@@ -934,7 +1163,6 @@
             return true;
         }
 
-        // 格式化分鐘差為「X小時Y分」
         function formatDuration(mins) {
             const rounded = Math.round(mins * 10) / 10;
             const h = Math.floor(rounded / 60);
@@ -950,7 +1178,7 @@
 
             for (let page = 1; page <= 53; page++) {
                 const items = RAW_SCHEDULE_PAGES[page] || [];
-                let currentDayOffset = 1; // 第1天 或 第2天
+                let currentDayOffset = 1;
                 let prevDepMin = -1;
 
                 items.forEach((raw, idx) => {
@@ -958,14 +1186,12 @@
                     const depMin = parseTimeToMinutes(depTime);
                     let arrMin = parseTimeToMinutes(arrTime);
 
-                    // 跨午夜車次處理 (例如 22:57.5 開 -> 00:16 到)
                     let isOvernightRun = false;
                     if (arrMin < depMin) {
                         arrMin += 1440;
                         isOvernightRun = true;
                     }
 
-                    // 計算班表頁內的跨日 (當後一班車開車時間明顯早於前一班車，代表外宿進入第2天)
                     if (idx > 0 && depMin < prevDepMin - 180) {
                         currentDayOffset += 1;
                     }
@@ -973,7 +1199,6 @@
 
                     const baseNo = extractBaseTrainNo(trainNo);
                     const isDeadhead = trainNo.includes('便');
-                    // 依據需求第6點：6652(回送)不用標出來當紫色，算在重複車次的一部分即可
                     const isParcel = note.includes('行包');
                     const trainCategory = classifyTrainCategory(trainNo);
 
@@ -1005,7 +1230,6 @@
                 });
             }
 
-            // 標記哪些車次屬於「重複車次」
             allRuns.forEach(run => {
                 const group = baseTrainMap[run.baseNo];
                 run.isMultiSegment = group.length > 1;
@@ -1013,7 +1237,7 @@
         }
 
         // ============================================================================
-        // 3. 篩選器邏輯與下拉選單初始化 (起、訖站分開為 2 個選單)
+        // 3. 篩選器邏輯與下拉選單初始化
         // ============================================================================
         function populateSelectOptions() {
             const fromStationSet = new Set();
@@ -1059,15 +1283,23 @@
             const day = document.getElementById('day-filter').value;
             const type = document.getElementById('type-filter').value;
 
-            // 控制清除按鈕與重設按鈕顯示
             document.getElementById('clear-search-btn').classList.toggle('hidden', !query);
-            const hasAnyFilter = query !== '' || fromStation !== 'ALL' || toStation !== 'ALL' || page !== 'ALL' || category !== 'ALL' || day !== 'ALL' || type !== 'ALL';
+            const hasAnyFilter = query !== '' || fromStation !== 'ALL' || toStation !== 'ALL' || page !== 'ALL' || category !== 'ALL' || day !== 'ALL' || type !== 'ALL' || selectedMapStation !== null;
             document.getElementById('reset-filter-btn').classList.toggle('hidden', !hasAnyFilter);
 
             return allRuns.filter(r => {
                 if (page !== 'ALL' && r.page !== parseInt(page, 10)) return false;
                 if (fromStation !== 'ALL' && r.fromStation !== fromStation) return false;
                 if (toStation !== 'ALL' && r.toStation !== toStation) return false;
+                if (selectedMapStation) {
+                    // 若在地圖點選了「北湖」，也一併顯示經過北湖往返富岡基地或新富/湖口的相關車次
+                    if (selectedMapStation === '北湖') {
+                        const wpNames = getRouteWaypoints(r.fromStation, r.toStation, r.trainNo).map(w => w.name);
+                        if (!wpNames.includes('北湖')) return false;
+                    } else if (r.fromStation !== selectedMapStation && r.toStation !== selectedMapStation) {
+                        return false;
+                    }
+                }
                 if (category !== 'ALL' && r.trainCategory !== category) return false;
                 if (!runsOnDay(r.note, day)) return false;
 
@@ -1104,6 +1336,9 @@
             document.getElementById('category-filter').value = 'ALL';
             document.getElementById('day-filter').value = 'ALL';
             document.getElementById('type-filter').value = 'ALL';
+            selectedMapStation = null;
+            updateSelectedStationUI();
+            renderIslandMapBase();
             handleFilterChange();
         }
 
@@ -1134,10 +1369,8 @@
             const activeTimeStr = formatMinsToHHMM(activeMins);
             updateTimelineModeUI();
 
-            // 找出目前篩選範圍內所有「壓到時間軸」的車次
             const touchingRuns = baseFilteredRuns.filter(r => isRunTouchingTimeline(r, activeMins));
 
-            // 更新上方「壓到時間軸車次」即時橫幅
             const banner = document.getElementById('intersecting-trains-banner');
             if (banner) {
                 if (touchingRuns.length > 0) {
@@ -1172,10 +1405,8 @@
                 }
             }
 
-            // 如果勾選「只顯示壓到時間軸的車次」，則進行過濾
             const runs = onlyActiveTimeline ? touchingRuns : baseFilteredRuns;
 
-            // 更新統計文字
             const uniquePages = new Set(runs.map(r => r.page)).size;
             document.getElementById('stats-counter').textContent = `顯示 ${runs.length} 筆車次區間（涵蓋 ${uniquePages} 頁班表，壓線 ${touchingRuns.length} 筆）`;
 
@@ -1189,7 +1420,6 @@
                 return;
             }
 
-            // 建立縱軸列 (Rows)
             let rows = [];
             if (groupSameTrain) {
                 const map = new Map();
@@ -1223,7 +1453,6 @@
                 }));
             }
 
-            // 排序縱軸列
             rows.sort((a, b) => {
                 if (sortMode === 'TIME_ASC') return a.earliestDep - b.earliestDep || a.numericNo - b.numericNo;
                 if (sortMode === 'TRAIN_NO') return a.numericNo - b.numericNo || a.earliestDep - b.earliestDep;
@@ -1231,16 +1460,13 @@
                 return 0;
             });
 
-            // 時間軸設定：00:00 ~ 25:00 (共25小時刻度)
             const totalHours = 25;
             const timelineWidth = totalHours * hourWidthPx;
-            const leftColWidth = 116; // 固定左側車次欄寬度 (px)
+            const leftColWidth = 116;
 
-            // 計算基準時間紅線位置
             const nowLeftPx = (activeMins / 60) * hourWidthPx;
             const overnightNowLeftPx = activeMins < 60 ? ((activeMins + 1440) / 60) * hourWidthPx : null;
 
-            // 1. 建構頂部時間刻度列
             let headerHoursHtml = '';
             for (let h = 0; h < totalHours; h++) {
                 const displayHour = h < 24 ? String(h).padStart(2, '0') + ':00' : '翌日0' + (h - 24) + ':00';
@@ -1252,7 +1478,6 @@
             }
 
             let html = `
-                <!-- 頂部時間橫軸標頭 -->
                 <div class="sticky top-0 z-30 flex bg-slate-900/95 backdrop-blur border-b border-slate-700">
                     <div style="width: ${leftColWidth}px" class="sticky left-0 z-40 bg-slate-900 px-3 py-2 text-xs font-bold text-sky-400 border-r border-slate-700 flex items-center justify-between shrink-0 sticky-col-shadow">
                         <span>縱軸：車次</span>
@@ -1260,7 +1485,6 @@
                     </div>
                     <div onclick="setTimelineByClick(event, ${timelineWidth})" title="點擊任意時間位置即可移動時間軸紅線" class="flex relative cursor-pointer" style="width: ${timelineWidth}px">
                         ${headerHoursHtml}
-                        <!-- 頂部時間軸紅線時間標籤 -->
                         <div style="left: ${nowLeftPx}px" class="absolute top-0 bottom-0 z-30 pointer-events-none flex flex-col items-center">
                             <span class=" -translate-x-1/2 bg-rose-600 text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-b shadow-md border border-rose-300 whitespace-nowrap">
                                 🔴 ${activeTimeStr}
@@ -1269,11 +1493,9 @@
                     </div>
                 </div>
 
-                <!-- 車次資料列 -->
                 <div class="divide-y divide-slate-800/80 relative">
             `;
 
-            // 處理同列中若有多個重疊時間區間，自動分上下軌道避免遮擋
             rows.forEach((row) => {
                 const sortedItems = [...row.items].sort((a, b) => a.depMin - b.depMin || a.page - b.page);
                 const lanes = [];
@@ -1321,10 +1543,8 @@
                 const rowHeight = Math.max(52, lanes.length * laneHeight + 8);
                 const isDuplicateRow = row.isDuplicateTrain;
 
-                // 檢查這一列是否有任何一段車次壓到時間軸
                 let rowTouchesTimeline = false;
 
-                // 繪製該列的橫條 (依需求第5點：不特別區分樹林交接，統一識別為重複車次)
                 let barsHtml = '';
                 lanes.forEach((lane, laneIdx) => {
                     const topPx = 4 + laneIdx * laneHeight;
@@ -1335,7 +1555,6 @@
                         const colorClass = getBarColorClass(seg);
                         const pagesText = seg.pages.map(p => `P.${p}`).join(', ');
 
-                        // 判斷此車次橫條是否壓到時間軸
                         const isTouching = isRunTouchingTimeline(seg, activeMins);
                         if (isTouching) rowTouchesTimeline = true;
 
@@ -1364,7 +1583,6 @@
 
                 html += `
                     <div class="flex hover:bg-slate-800/40 transition-colors group ${rowTouchesTimeline ? 'bg-rose-950/15' : ''}">
-                        <!-- 固定左側縱軸：車次欄位 -->
                         <div onclick="openTrainModal(${row.items[0].id})"
                             style="width: ${leftColWidth}px; min-height: ${rowHeight}px"
                             class="sticky left-0 z-20 ${rowTouchesTimeline ? 'bg-rose-950/90 active-timeline-row-cell' : 'bg-slate-900'} group-hover:bg-slate-800 px-2.5 py-1.5 border-r border-slate-700/80 shrink-0 flex flex-col justify-center cursor-pointer sticky-col-shadow">
@@ -1380,9 +1598,7 @@
                             </div>
                         </div>
 
-                        <!-- 右側時間軸軌道區 -->
                         <div class="relative timeline-grid-bg" style="width: ${timelineWidth}px; height: ${rowHeight}px; background-size: ${hourWidthPx}px 100%;">
-                            <!-- 基準時間軸紅線 -->
                             <div style="left: ${nowLeftPx}px" class="absolute top-0 bottom-0 w-[2px] bg-rose-500 shadow-[0_0_8px_#ef4444] pointer-events-none z-20"></div>
                             ${overnightNowLeftPx !== null ? `<div style="left: ${overnightNowLeftPx}px" class="absolute top-0 bottom-0 w-[2px] bg-rose-500/70 border-r border-dashed border-rose-300 pointer-events-none z-20"></div>` : ''}
                             ${barsHtml}
@@ -1395,7 +1611,6 @@
             canvas.innerHTML = html;
         }
 
-        // 縮放時間軸寬度
         function changeZoom(delta) {
             hourWidthPx = Math.min(140, Math.max(40, hourWidthPx + delta));
             const label = document.getElementById('zoom-label');
@@ -1406,12 +1621,489 @@
             renderGanttView();
         }
 
-        // 捲動至現在時間或基準時間軸位置
         function scrollToCurrentTime() {
             const container = document.getElementById('gantt-scroll-container');
             const mins = getActiveTimelineMinutes();
             const targetPx = Math.max(0, (mins / 60) * hourWidthPx - 140);
             container.scrollTo({ left: targetPx, behavior: 'smooth' });
+        }
+
+        // ============================================================================
+        // 4.5 視角 1.5：環島鐵路拓撲地圖與時間軸動態雷達邏輯 (含支線與179次海線)
+        // ============================================================================
+        function getRouteWaypoints(fromStation, toStation, trainNo = "") {
+            let start = fromStation;
+            let end = toStation;
+            let prefix = [];
+            let suffix = [];
+
+            // 1. 基隆支線 (由七堵分岔)
+            if (start === "基隆") { prefix.push("基隆"); start = "七堵"; }
+            if (end === "基隆")   { suffix.push("基隆"); end = "七堵"; }
+
+            // 2. 蘇澳支線 (由二結分岔)
+            if (start === "蘇澳") { prefix.push("蘇澳"); start = "二結"; }
+            if (end === "蘇澳")   { suffix.push("蘇澳"); end = "二結"; }
+
+            // 3. 樹調支線 (由樹林分岔)
+            if (start === "樹調") { prefix.push("樹調"); start = "樹林"; }
+            if (end === "樹調")   { suffix.push("樹調"); end = "樹林"; }
+
+            // 4. 富岡基地支線 (由北湖分岔)
+            if (start === "富岡基地") { prefix.push("富岡基地"); start = "北湖"; }
+            if (end === "富岡基地")   { suffix.push("富岡基地"); end = "北湖"; }
+
+            const idxA = MAIN_LINE_SEQUENCE.indexOf(start);
+            const idxB = MAIN_LINE_SEQUENCE.indexOf(end);
+
+            let mainSlice = [];
+            if (idxA !== -1 && idxB !== -1) {
+                if (idxA <= idxB) {
+                    mainSlice = MAIN_LINE_SEQUENCE.slice(idxA, idxB + 1);
+                } else {
+                    mainSlice = MAIN_LINE_SEQUENCE.slice(idxB, idxA + 1).reverse();
+                }
+            } else {
+                mainSlice = start === end ? [start] : [start, end];
+            }
+
+            // 5. 179次 專屬海線判斷：竹南 ➔ 海線 ➔ 彰化 (不經苗栗山線)
+            if (trainNo === "179") {
+                const mIdx = mainSlice.indexOf("苗栗");
+                if (mIdx !== -1 && mainSlice.includes("竹南") && mainSlice.includes("彰化")) {
+                    mainSlice.splice(mIdx, 1, "海線");
+                }
+            }
+
+            const fullStationNames = [...prefix, ...mainSlice, ...suffix];
+            return fullStationNames
+                .map(name => {
+                    if (name === "海線") return COAST_LINE_WAYPOINT;
+                    if (STATION_NODES[name]) return { name, ...STATION_NODES[name] };
+                    return null;
+                })
+                .filter(Boolean);
+        }
+
+        function renderIslandMapBase() {
+            const tracksLayer = document.getElementById('map-layer-base-tracks');
+            const stationsLayer = document.getElementById('map-layer-stations');
+            if (!tracksLayer || !stationsLayer) return;
+
+            const mainPoints = MAIN_LINE_SEQUENCE.map(st => `${STATION_NODES[st].x},${STATION_NODES[st].y}`).join(' ');
+            const keelungBranch = `${STATION_NODES["七堵"].x},${STATION_NODES["七堵"].y} ${STATION_NODES["基隆"].x},${STATION_NODES["基隆"].y}`;
+            const suaoBranch = `${STATION_NODES["二結"].x},${STATION_NODES["二結"].y} ${STATION_NODES["蘇澳"].x},${STATION_NODES["蘇澳"].y}`;
+            const shudiaoBranch = `${STATION_NODES["樹林"].x},${STATION_NODES["樹林"].y} ${STATION_NODES["樹調"].x},${STATION_NODES["樹調"].y}`;
+            const fugangBranch = `${STATION_NODES["北湖"].x},${STATION_NODES["北湖"].y} ${STATION_NODES["富岡基地"].x},${STATION_NODES["富岡基地"].y}`;
+            const coastLinePoints = `${STATION_NODES["竹南"].x},${STATION_NODES["竹南"].y} ${COAST_LINE_WAYPOINT.x},${COAST_LINE_WAYPOINT.y} ${STATION_NODES["彰化"].x},${STATION_NODES["彰化"].y}`;
+            const southLinkPath = `M ${STATION_NODES["潮州"].x} ${STATION_NODES["潮州"].y} Q 450 885 ${STATION_NODES["台東"].x} ${STATION_NODES["台東"].y}`;
+
+            tracksLayer.innerHTML = `
+                <!-- 南迴線意象虛線 -->
+                <path d="${southLinkPath}" fill="none" stroke="#334155" stroke-width="4" stroke-dasharray="8 8" stroke-linecap="round" />
+
+                <!-- 海線 (竹南 ➔ 彰化) 軌道底層與示意線 -->
+                <polyline points="${coastLinePoints}" fill="none" stroke="#0f172a" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" />
+                <polyline points="${coastLinePoints}" fill="none" stroke="#0891b2" stroke-width="4" stroke-dasharray="6 4" stroke-linejoin="round" stroke-linecap="round" />
+                <g transform="translate(${COAST_LINE_WAYPOINT.x - 10}, ${COAST_LINE_WAYPOINT.y})">
+                    <rect x="-34" y="-10" width="38" height="19" rx="4" fill="#083344" stroke="#06b6d4" stroke-width="1" opacity="0.9" />
+                    <text x="-15" y="3" text-anchor="middle" fill="#67e8f9" style="font-size: 10.5px; font-weight: 700;">海線</text>
+                </g>
+                <!-- 山線文字輔助標示 -->
+                <text x="${STATION_NODES["苗栗"].x - 12}" y="${STATION_NODES["苗栗"].y + 4}" text-anchor="end" fill="#64748b" style="font-size: 10px; font-weight: 600;">(山線)</text>
+
+                <!-- 主幹線與各支線底層深色路基 -->
+                <polyline points="${mainPoints}" fill="none" stroke="#0f172a" stroke-width="11" stroke-linejoin="round" stroke-linecap="round" />
+                <polyline points="${keelungBranch}" fill="none" stroke="#0f172a" stroke-width="10" stroke-linecap="round" />
+                <polyline points="${suaoBranch}" fill="none" stroke="#0f172a" stroke-width="10" stroke-linecap="round" />
+                <polyline points="${shudiaoBranch}" fill="none" stroke="#0f172a" stroke-width="9" stroke-linecap="round" />
+                <polyline points="${fugangBranch}" fill="none" stroke="#0f172a" stroke-width="9" stroke-linecap="round" />
+
+                <!-- 主幹線與各支線軌道 -->
+                <polyline points="${mainPoints}" fill="none" stroke="#334155" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round" />
+                <polyline points="${keelungBranch}" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round" />
+                <polyline points="${suaoBranch}" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round" />
+                <!-- 樹調支線 (樹林分出) 與 富岡基地支線 (北湖分出) -->
+                <polyline points="${shudiaoBranch}" fill="none" stroke="#64748b" stroke-width="4.5" stroke-linecap="round" />
+                <polyline points="${fugangBranch}" fill="none" stroke="#64748b" stroke-width="4.5" stroke-linecap="round" />
+            `;
+
+            let stationsHtml = '';
+            Object.entries(STATION_NODES).forEach(([name, node]) => {
+                const isSelected = selectedMapStation === name;
+
+                let dx = 0, dy = 0, anchor = "middle";
+                if (node.labelPos === "left")      { dx = -13; dy = 4;   anchor = "end"; }
+                if (node.labelPos === "right")     { dx = 13;  dy = 4;   anchor = "start"; }
+                if (node.labelPos === "top")       { dx = 0;   dy = -12; anchor = "middle"; }
+                if (node.labelPos === "bottom")    { dx = 0;   dy = 22;  anchor = "middle"; }
+                if (node.labelPos === "top-left")  { dx = -10; dy = -12; anchor = "end"; }
+                if (node.labelPos === "top-right") { dx = 12;  dy = -10; anchor = "start"; }
+
+                let shapeHtml = '';
+                if (node.role === 'hub') {
+                    shapeHtml = `
+                        <circle cx="${node.x}" cy="${node.y}" r="20" fill="url(#shulin-halo)" />
+                        <circle cx="${node.x}" cy="${node.y}" r="${isSelected ? 11 : 9}" fill="#f59e0b" stroke="#ffffff" stroke-width="2.5" />
+                    `;
+                } else if (node.role === 'depot') {
+                    shapeHtml = `
+                        <rect x="${node.x - 6}" y="${node.y - 6}" width="12" height="12" rx="3"
+                            fill="${isSelected ? '#38bdf8' : '#a855f7'}" stroke="#f8fafc" stroke-width="2" />
+                    `;
+                } else if (node.role === 'major' || node.role === 'terminal') {
+                    shapeHtml = `
+                        <circle cx="${node.x}" cy="${node.y}" r="${isSelected ? 8.5 : 6.5}"
+                            fill="${isSelected ? '#38bdf8' : '#0f172a'}" stroke="${isSelected ? '#ffffff' : '#38bdf8'}" stroke-width="2.5" />
+                    `;
+                } else {
+                    shapeHtml = `
+                        <circle cx="${node.x}" cy="${node.y}" r="${isSelected ? 7 : 4.5}"
+                            fill="${isSelected ? '#38bdf8' : '#1e293b'}" stroke="#94a3b8" stroke-width="2" />
+                    `;
+                }
+
+                const textColor = node.role === 'hub'
+                    ? '#fbbf24'
+                    : (isSelected ? '#38bdf8' : (node.role === 'depot' ? '#d8b4fe' : '#e2e8f0'));
+                const fontWeight = (node.role === 'hub' || node.role === 'major' || node.role === 'terminal' || isSelected) ? '700' : '500';
+                const fontSize = node.role === 'hub' ? '15px' : '13px';
+
+                stationsHtml += `
+                    <g onclick="handleStationClick('${name}')" class="cursor-pointer group">
+                        <circle cx="${node.x}" cy="${node.y}" r="18" fill="transparent" />
+                        ${shapeHtml}
+                        <text x="${node.x + dx}" y="${node.y + dy}"
+                            text-anchor="${anchor}"
+                            fill="${textColor}"
+                            style="font-size: ${fontSize}; font-weight: ${fontWeight};"
+                            class="transition-all group-hover:fill-sky-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                            ${name}
+                        </text>
+                    </g>
+                `;
+            });
+
+            stationsLayer.innerHTML = stationsHtml;
+        }
+
+        function handleStationClick(stationName) {
+            if (selectedMapStation === stationName) {
+                selectedMapStation = null;
+            } else {
+                selectedMapStation = stationName;
+            }
+            updateSelectedStationUI();
+            renderIslandMapBase();
+            renderMapView();
+        }
+
+        function clearStationSelection() {
+            selectedMapStation = null;
+            updateSelectedStationUI();
+            renderIslandMapBase();
+            renderMapView();
+        }
+
+        function updateSelectedStationUI() {
+            const chip = document.getElementById('selected-station-chip');
+            const chipText = document.getElementById('selected-station-chip-text');
+            const infoBox = document.getElementById('selected-station-info');
+
+            if (selectedMapStation) {
+                chip.classList.remove('hidden');
+                chipText.textContent = `📍 鎖定車站：${selectedMapStation}`;
+                let relatedRuns = [];
+                if (selectedMapStation === '北湖') {
+                    relatedRuns = allRuns.filter(r => getRouteWaypoints(r.fromStation, r.toStation, r.trainNo).some(w => w.name === '北湖'));
+                } else {
+                    relatedRuns = allRuns.filter(r => r.fromStation === selectedMapStation || r.toStation === selectedMapStation);
+                }
+                const pages = Array.from(new Set(relatedRuns.map(r => r.page))).sort((a, b) => a - b);
+                infoBox.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-amber-300"><i class="fa-solid fa-location-dot mr-1"></i>${selectedMapStation}站 路線篩選中</span>
+                        <button onclick="clearStationSelection()" class="text-sky-400 hover:underline text-[11px]">顯示全島全部車次</button>
+                    </div>
+                    <p class="mt-1 text-slate-300">全班表共有 <strong>${relatedRuns.length}</strong> 趟次${selectedMapStation === '北湖' ? '行經或由北湖分岔往返富岡基地' : `以「${selectedMapStation}」為起站或訖站`}（分佈於 ${pages.length} 個班表頁）。</p>
+                `;
+            } else {
+                chip.classList.add('hidden');
+                infoBox.innerHTML = `💡 <strong>操作小撇步：</strong>拖曳上方滑桿可觀察列車沿鐵路移動；點擊地圖上的<strong>任意車站節點</strong>可高亮該站並快速篩選起訖班次。`;
+            }
+        }
+
+        function calculateTrainMapPosition(fromStation, toStation, progress, trainNo = "") {
+            const waypoints = getRouteWaypoints(fromStation, toStation, trainNo);
+            if (!waypoints || waypoints.length === 0) {
+                return { x: 400, y: 460, angle: 0, currentSegment: `${fromStation}→${toStation}`, passedPoints: [], futurePoints: [] };
+            }
+            if (waypoints.length === 1) {
+                return {
+                    x: waypoints[0].x,
+                    y: waypoints[0].y,
+                    angle: 0,
+                    currentSegment: waypoints[0].name,
+                    passedPoints: [waypoints[0]],
+                    futurePoints: [waypoints[0]]
+                };
+            }
+
+            const segLengths = [];
+            let totalLength = 0;
+            for (let i = 0; i < waypoints.length - 1; i++) {
+                const dx = waypoints[i + 1].x - waypoints[i].x;
+                const dy = waypoints[i + 1].y - waypoints[i].y;
+                const len = Math.hypot(dx, dy);
+                segLengths.push(len);
+                totalLength += len;
+            }
+
+            const clampedProg = Math.max(0, Math.min(1, progress));
+            const targetDist = clampedProg * totalLength;
+
+            let accumulated = 0;
+            for (let i = 0; i < segLengths.length; i++) {
+                const segLen = segLengths[i];
+                if (accumulated + segLen >= targetDist || i === segLengths.length - 1) {
+                    const localT = segLen > 0 ? (targetDist - accumulated) / segLen : 0;
+                    const p1 = waypoints[i];
+                    const p2 = waypoints[i + 1];
+
+                    const rawX = p1.x + (p2.x - p1.x) * localT;
+                    const rawY = p1.y + (p2.y - p1.y) * localT;
+
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const norm = Math.hypot(dx, dy) || 1;
+                    const offsetDist = 4.5;
+                    const offsetX = (-dy / norm) * offsetDist;
+                    const offsetY = (dx / norm) * offsetDist;
+
+                    const currentPos = { x: rawX + offsetX, y: rawY + offsetY };
+                    const passedPoints = [...waypoints.slice(0, i + 1), { x: rawX, y: rawY }];
+                    const futurePoints = [{ x: rawX, y: rawY }, ...waypoints.slice(i + 1)];
+
+                    let segLabel = p1.name === p2.name ? p1.name : `${p1.name} ➔ ${p2.name}`;
+                    if (p1.name === "海線" || p2.name === "海線") {
+                        segLabel = "竹南 ➔ 彰化 (海線)";
+                    }
+
+                    return {
+                        x: currentPos.x,
+                        y: currentPos.y,
+                        rawX,
+                        rawY,
+                        angle: Math.atan2(dy, dx) * (180 / Math.PI),
+                        currentSegment: segLabel,
+                        passedPoints,
+                        futurePoints
+                    };
+                }
+                accumulated += segLen;
+            }
+        }
+
+        function getRunProgressAtMinute(run, activeMins) {
+            let compareMin = activeMins;
+            if (run.isOvernightRun && activeMins < run.depMin && (activeMins + 1440) <= run.arrMin) {
+                compareMin = activeMins + 1440;
+            }
+            if (compareMin < run.depMin || compareMin > run.arrMin) return null;
+            if (run.durationMin <= 0) return 1;
+            return (compareMin - run.depMin) / run.durationMin;
+        }
+
+        function handleTimelineSliderDrag(sliderVal) {
+            customTimelineMins = parseFloat(sliderVal);
+            isCustomTimeline = true;
+            updateTimelineModeUI();
+            renderMapView();
+        }
+
+        function stepTimelineMinutes(deltaMins) {
+            const current = getActiveTimelineMinutes();
+            customTimelineMins = ((current + deltaMins) % 1440 + 1440) % 1440;
+            isCustomTimeline = true;
+            updateTimelineModeUI();
+            renderActiveView();
+        }
+
+        function toggleTimelinePlayback() {
+            const btn = document.getElementById('btn-map-play');
+            const icon = document.getElementById('icon-map-play');
+            const text = document.getElementById('text-map-play');
+
+            if (timelinePlayTimer) {
+                clearInterval(timelinePlayTimer);
+                timelinePlayTimer = null;
+                if (icon) icon.className = 'fa-solid fa-play';
+                if (text) text.textContent = '自動播放';
+                if (btn) btn.className = 'px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center gap-1.5 shadow';
+            } else {
+                isCustomTimeline = true;
+                customTimelineMins = getActiveTimelineMinutes();
+                if (icon) icon.className = 'fa-solid fa-pause';
+                if (text) text.textContent = '暫停播放';
+                if (btn) btn.className = 'px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium flex items-center gap-1.5 shadow';
+
+                timelinePlayTimer = setInterval(() => {
+                    customTimelineMins = (customTimelineMins + 1) % 1440;
+                    updateTimelineModeUI();
+                    renderMapView();
+                }, 100);
+            }
+        }
+
+        function renderMapView() {
+            const routesLayer = document.getElementById('map-layer-active-routes');
+            const trainsLayer = document.getElementById('map-layer-live-trains');
+            if (!routesLayer || !trainsLayer) return;
+
+            const activeMins = getActiveTimelineMinutes();
+            const timeStr = formatMinsToHHMM(activeMins);
+            updateTimelineModeUI();
+
+            const filteredRuns = getFilteredRuns();
+            const activeRuns = [];
+
+            filteredRuns.forEach(run => {
+                const prog = getRunProgressAtMinute(run, activeMins);
+                if (prog !== null) {
+                    const existing = activeRuns.find(m =>
+                        m.trainNo === run.trainNo &&
+                        m.depTime === run.depTime &&
+                        m.arrTime === run.arrTime &&
+                        m.fromStation === run.fromStation &&
+                        m.toStation === run.toStation
+                    );
+                    if (existing) {
+                        if (!existing.pages.includes(run.page)) existing.pages.push(run.page);
+                    } else {
+                        activeRuns.push({
+                            ...run,
+                            progress: prog,
+                            pages: [run.page]
+                        });
+                    }
+                }
+            });
+
+            const uniquePages = new Set(filteredRuns.map(r => r.page)).size;
+            document.getElementById('stats-counter').textContent = `環島雷達 [${timeStr}]：目前 ${activeRuns.length} 班列車壓線行駛中（符合篩選共 ${filteredRuns.length} 筆 / ${uniquePages} 頁）`;
+
+            const badgeEl = document.getElementById('map-active-count-badge');
+            if (badgeEl) badgeEl.textContent = `${activeRuns.length} 班行駛中`;
+
+            let routesSvg = '';
+            let trainsSvg = '';
+            const placedLabels = [];
+
+            activeRuns.forEach(run => {
+                const pos = calculateTrainMapPosition(run.fromStation, run.toStation, run.progress, run.trainNo);
+                const pctText = Math.round(run.progress * 100) + '%';
+                const pagesText = run.pages.map(p => `P.${p}`).join(',');
+
+                let themeColor = '#0284c7';
+                let strokeColor = '#38bdf8';
+                if (run.isParcel) {
+                    themeColor = '#9333ea'; strokeColor = '#c084fc';
+                } else if (run.isDeadhead) {
+                    themeColor = '#d97706'; strokeColor = '#fbbf24';
+                } else if (run.isMultiSegment) {
+                    themeColor = '#059669'; strokeColor = '#34d399';
+                }
+
+                if (pos.passedPoints.length >= 2) {
+                    const passedStr = pos.passedPoints.map(p => `${p.x},${p.y}`).join(' ');
+                    routesSvg += `<polyline points="${passedStr}" fill="none" stroke="${strokeColor}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />`;
+                }
+                if (pos.futurePoints.length >= 2) {
+                    const futureStr = pos.futurePoints.map(p => `${p.x},${p.y}`).join(' ');
+                    routesSvg += `<polyline points="${futureStr}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-dasharray="5 5" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" />`;
+                }
+
+                let labelX = pos.x;
+                let labelY = pos.y - 24;
+                placedLabels.forEach(prev => {
+                    if (Math.abs(labelX - prev.x) < 70 && Math.abs(labelY - prev.y) < 28) {
+                        labelY = prev.y + 30;
+                    }
+                });
+                placedLabels.push({ x: labelX, y: labelY });
+
+                trainsSvg += `
+                    <g onclick="openTrainModal(${run.id})" class="cursor-pointer">
+                        <line x1="${pos.x}" y1="${pos.y}" x2="${labelX}" y2="${labelY}" stroke="${strokeColor}" stroke-width="1.5" stroke-dasharray="2 2" />
+                        <circle cx="${pos.x}" cy="${pos.y}" r="10" fill="${strokeColor}" fill-opacity="0.28" />
+                        <circle cx="${pos.x}" cy="${pos.y}" r="5.5" fill="#ef4444" stroke="#ffffff" stroke-width="2" />
+                        <g transform="translate(${labelX}, ${labelY})">
+                            <rect x="-49" y="-14" width="98" height="28" rx="7" fill="#020617" fill-opacity="0.45" />
+                            <rect x="-48" y="-13" width="96" height="26" rx="6" fill="${themeColor}" stroke="#ffffff" stroke-width="1.5" />
+                            <text x="0" y="-1" text-anchor="middle" fill="#ffffff" class="font-mono font-bold" style="font-size: 11px;">
+                                ${run.trainNo} (${pctText})
+                            </text>
+                            <text x="0" y="9" text-anchor="middle" fill="#f1f5f9" class="font-sans" style="font-size: 8.5px;">
+                                ${run.fromStation}→${run.toStation} ${pagesText}
+                            </text>
+                        </g>
+                    </g>
+                `;
+            });
+
+            routesLayer.innerHTML = routesSvg;
+            trainsLayer.innerHTML = trainsSvg;
+
+            renderMapActiveTrainList(activeRuns, timeStr);
+        }
+
+        function renderMapActiveTrainList(activeRuns, timeStr) {
+            const listContainer = document.getElementById('map-live-trains-list');
+            if (!listContainer) return;
+
+            if (activeRuns.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="p-8 text-center text-slate-400 bg-slate-950/50 rounded-xl border border-slate-800/80">
+                        <i class="fa-solid fa-train-subway text-2xl mb-2 text-slate-600"></i>
+                        <p class="text-xs sm:text-sm font-medium text-slate-300">${timeStr} 目前無符合條件的在線列車</p>
+                        <p class="text-[11px] text-slate-500 mt-1">請試著拖曳上方時間軸滑桿至尖峰時段（如 07:30 或 16:30）</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sorted = [...activeRuns].sort((a, b) => a.numericNo - b.numericNo);
+
+            listContainer.innerHTML = sorted.map(run => {
+                const pos = calculateTrainMapPosition(run.fromStation, run.toStation, run.progress, run.trainNo);
+                const pct = Math.round(run.progress * 100);
+                const pagesBadges = run.pages.map(p => `<span class="px-1.5 py-0.5 rounded bg-slate-700 text-sky-300 font-mono text-[10px]">P.${p}</span>`).join(' ');
+                const badgeColor = run.isParcel ? 'bg-purple-600' : (run.isDeadhead ? 'bg-amber-500 text-slate-950' : (run.isMultiSegment ? 'bg-emerald-600' : 'bg-sky-600'));
+
+                return `
+                    <div onclick="openTrainModal(${run.id})" class="p-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 cursor-pointer transition space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded-md font-mono font-bold text-xs text-white ${badgeColor}">${run.trainNo}</span>
+                                <span class="font-bold text-xs sm:text-sm text-white">${run.fromStation} ➔ ${run.toStation}</span>
+                            </div>
+                            <div class="flex items-center gap-1">${pagesBadges}</div>
+                        </div>
+
+                        <div class="flex items-center justify-between text-[11px] text-slate-300">
+                            <span class="text-rose-300 font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-location-dot text-rose-500"></i>
+                                區間估算：${pos.currentSegment} (${pct}%)
+                            </span>
+                            <span class="font-mono text-slate-400">${run.depTime} - ${run.arrTime}</span>
+                        </div>
+
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden p-0.5 border border-slate-700/60">
+                            <div class="bg-gradient-to-r from-sky-500 to-rose-500 h-full rounded-full transition-all duration-150" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // ============================================================================
@@ -1483,10 +2175,8 @@
                 const lastRun = pageRuns[pageRuns.length - 1];
                 const isPinned = pinnedPage === pageNo;
 
-                // 計算總駕駛/乘務時數
                 const totalWorkMins = pageRuns.reduce((acc, r) => acc + r.durationMin, 0);
 
-                // 組裝車次流程列表與折返待命時間
                 let stepsHtml = '';
                 pageRuns.forEach((run, idx) => {
                     if (idx > 0) {
@@ -1537,7 +2227,6 @@
                 html += `
                     <div class="bg-slate-900 border ${isPinned ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-slate-800'} rounded-2xl p-4 flex flex-col justify-between shadow-lg">
                         <div>
-                            <!-- 卡片頂部資訊 -->
                             <div class="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800">
                                 <div class="flex items-center gap-2.5">
                                     <span class="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400 font-mono font-bold text-sm flex items-center justify-center">
@@ -1559,7 +2248,6 @@
                                 </button>
                             </div>
 
-                            <!-- 流程清單 -->
                             <div class="space-y-1.5">
                                 ${stepsHtml}
                             </div>
@@ -1584,7 +2272,7 @@
         }
 
         // ============================================================================
-        // 6. 視角 3：重複車次檢視 (不區分樹林交接，統一識別重複車次)
+        // 6. 視角 3：重複車次檢視
         // ============================================================================
         function renderHandoverView() {
             const container = document.getElementById('handover-cards-container');
@@ -1660,7 +2348,6 @@
             document.getElementById('modal-title').textContent = `${run.fromStation} ➔ ${run.toStation}`;
             document.getElementById('modal-subtitle').textContent = `所屬班表：第 ${run.page} 頁（第 ${run.seqInPage} 趟勤務 • 第 ${run.dayInShift} 天 • ${getCategoryLabel(run.trainCategory)}）`;
 
-            // 找出同一個基礎車次的所有其他班段 (顯示重複車次資訊)
             const sameTrainRuns = baseTrainMap[run.baseNo] || [];
             let relatedHtml = '';
             if (sameTrainRuns.length > 1) {
@@ -1682,7 +2369,6 @@
                 `;
             }
 
-            // 找出該頁班表的完整前後順序
             const pageRuns = allRuns.filter(r => r.page === run.page);
             const pageSeqHtml = pageRuns.map(pr => `
                 <div onclick="openTrainModal(${pr.id})" class="p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer ${pr.id === run.id ? 'bg-sky-500/25 border border-sky-500/50 text-white font-bold' : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300'}">
@@ -1696,7 +2382,6 @@
             `).join('');
 
             document.getElementById('modal-body').innerHTML = `
-                <!-- 核心開車與抵達時間大字卡 -->
                 <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 flex items-center justify-between text-center">
                     <div class="flex-1">
                         <div class="text-xs text-slate-400">起站出發</div>
@@ -1708,7 +2393,7 @@
                         <div class="w-16 sm:w-24 h-0.5 bg-gradient-to-r from-sky-500 to-emerald-500 relative">
                             <i class="fa-solid fa-train absolute -top-2 left-1/2 -translate-x-1/2 text-xs text-white"></i>
                         </div>
-                        <span class="text-[11px] text-slate-400 mt-1">${run.isDeadhead ? '便乘移動' : (run.isParcel ? '回送/行包' : '值乘勤務')}</span>
+                        <span class="text-[11px] text-slate-400 mt-1">${run.isDeadhead ? '便乘移動' : (run.isParcel ? '回送/行包' : '值乘勤務')}${run.trainNo === '179' ? ' • 經海線' : ''}</span>
                     </div>
                     <div class="flex-1">
                         <div class="text-xs text-slate-400">訖站抵達</div>
@@ -1726,7 +2411,6 @@
 
                 ${relatedHtml}
 
-                <!-- 同頁完整班表預覽 -->
                 <div class="space-y-2">
                     <div class="text-xs font-bold text-slate-300 flex items-center justify-between">
                         <span>📋 第 ${run.page} 頁班表完整順序（共 ${pageRuns.length} 趟）：</span>
@@ -1737,7 +2421,6 @@
                 </div>
             `;
 
-            // 綁定底部按鈕動作
             const pinBtn = document.getElementById('modal-pin-btn');
             const isPinned = pinnedPage === run.page;
             pinBtn.innerHTML = `<i class="fa-solid fa-thumbtack ${isPinned ? 'text-amber-400' : 'text-slate-400'}"></i><span>${isPinned ? `取消釘選第 ${run.page} 頁` : `釘選第 ${run.page} 頁班表`}</span>`;
@@ -1760,12 +2443,10 @@
             document.getElementById('train-modal').classList.add('hidden');
         }
 
-        // 點擊背景關閉 Modal
         document.getElementById('train-modal').addEventListener('click', (e) => {
             if (e.target.id === 'train-modal') closeTrainModal();
         });
 
-        // 釘選班表頁功能
         function togglePinPage(pageNo) {
             if (pinnedPage === pageNo) {
                 pinnedPage = null;
@@ -1801,10 +2482,15 @@
         function switchView(viewName) {
             currentView = viewName;
             document.getElementById('view-gantt').classList.toggle('hidden', viewName !== 'gantt');
+            document.getElementById('view-map').classList.toggle('hidden', viewName !== 'map');
             document.getElementById('view-pages').classList.toggle('hidden', viewName !== 'pages');
             document.getElementById('view-handover').classList.toggle('hidden', viewName !== 'handover');
 
-            const tabs = ['gantt', 'pages', 'handover'];
+            if (viewName !== 'map' && timelinePlayTimer) {
+                toggleTimelinePlayback();
+            }
+
+            const tabs = ['gantt', 'map', 'pages', 'handover'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 if (t === viewName) {
@@ -1819,6 +2505,7 @@
 
         function renderActiveView() {
             if (currentView === 'gantt') renderGanttView();
+            else if (currentView === 'map') renderMapView();
             else if (currentView === 'pages') renderPagesView();
             else if (currentView === 'handover') renderHandoverView();
         }
@@ -1842,9 +2529,11 @@
             const timeStr = now.toTimeString().split(' ')[0];
             document.getElementById('live-clock').textContent = `週${days[now.getDay()]} ${timeStr}`;
 
-            // 每逢分鐘變更且處於即時模式時，自動更新甘特圖上的壓線紅框狀態
-            if (!isCustomTimeline && now.getSeconds() === 0 && currentView === 'gantt') {
-                renderGanttView();
+            const currentMin = now.getHours() * 60 + now.getMinutes();
+            if (!isCustomTimeline && currentMin !== lastAutoRenderedMinute) {
+                lastAutoRenderedMinute = currentMin;
+                if (currentView === 'gantt') renderGanttView();
+                else if (currentView === 'map') renderMapView();
             }
         }
 
@@ -1853,11 +2542,13 @@
             initDataset();
             populateSelectOptions();
             updatePinnedBadge();
+            renderIslandMapBase();
+            const now = new Date();
+            lastAutoRenderedMinute = now.getHours() * 60 + now.getMinutes();
             updateLiveClock();
             setInterval(updateLiveClock, 1000);
             renderActiveView();
 
-            // 預設將甘特圖捲動到清晨 05:00 附近，方便一眼看到早班至晚班車次
             setTimeout(() => {
                 const container = document.getElementById('gantt-scroll-container');
                 if (container) container.scrollLeft = 4.8 * hourWidthPx;
